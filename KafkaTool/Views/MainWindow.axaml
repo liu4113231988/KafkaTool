@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:KafkaTool.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="KafkaTool.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+		Width="1000" Height="800"
+		MinWidth="600" MinHeight="480"
+        Icon="/Assets/kafka_logo.png"
+        Title="KafkaTool">
+
+	<Design.DataContext>
+		<!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+		<vm:MainWindowViewModel/>
+	</Design.DataContext>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="32"></RowDefinition>
+			<RowDefinition Height="32"></RowDefinition>
+			<RowDefinition Height="*"></RowDefinition>
+			<RowDefinition Height="38"></RowDefinition>
+			<RowDefinition Height="36"></RowDefinition>
+			<RowDefinition Height="*"></RowDefinition>
+			<RowDefinition Height="40"></RowDefinition>
+		</Grid.RowDefinitions>
+
+		<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Row="0" Margin="8 10 2 0">
+			<TextBlock Width="120" FontSize="16" Margin="2 2 0 0">Kafka地址：</TextBlock>
+			<TextBox Width="600" Text="{Binding KafkaBootstrapServer}"></TextBox>
+		</StackPanel>
+		<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="8 16 2 0">
+			<TextBlock Width="120" FontSize="16" Margin="2 2 0 0">生产者Topic：</TextBlock>
+			<TextBox Text="{Binding ProducerTopic}" Width="600"></TextBox>
+		</StackPanel>
+		<DockPanel Grid.Row="2" Margin="8 18 8 2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+			<TextBox Text="{Binding ProducerMessage }"  AcceptsReturn="True" TextWrapping="Wrap"></TextBox>
+		</DockPanel>
+		<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Row="3" Margin="8 10 2 0">
+			<Button Command="{Binding SendMessageCommand}" Margin="0 0 20 0">发送消息</Button>
+		</StackPanel>
+		<StackPanel Grid.Row="4" Orientation="Horizontal" Margin="8 16 2 0">
+			<TextBlock Width="120" FontSize="16" Margin="2 2 0 0">消费者Topic：</TextBlock>
+			<TextBox Text="{Binding ConsumerTopic}" IsReadOnly="{Binding !IsReadonly}" Width="200"></TextBox>
+			<TextBlock Width="120" FontSize="16" Margin="40 2 0 0">消费者Group：</TextBlock>
+			<TextBox Text="{Binding ConsumerGroup}" IsReadOnly="{Binding !IsReadonly}" Width="200"></TextBox>
+		</StackPanel>
+		<DockPanel Grid.Row="5" Margin="8 18 8 2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+			<TextBox x:Name="txtConsumerMessage" Cursor="BottomSide" Text="{Binding ConsumerMessage}"  IsReadOnly="True"  AcceptsReturn="True" TextWrapping="Wrap"></TextBox>
+		</DockPanel>
+		<StackPanel  Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="8 4 2 0">
+			<Button Command="{Binding SubcribeMessageCommand}" IsEnabled="{Binding IsReadonly}" Margin="0 0 20 4">订阅消息</Button>
+			<Button Command="{Binding CancelSubcribeCommand }" Margin="0 0 20 4">取消订阅</Button>
+		</StackPanel>
+	</Grid>
+
+</Window>
