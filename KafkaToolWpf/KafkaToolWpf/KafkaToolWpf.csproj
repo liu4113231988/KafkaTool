@@ -14,8 +14,8 @@
 		<Content Include="Assets\kafka-logo.ico" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Confluent.Kafka" Version="2.5.3" />
-		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+		<PackageReference Include="Confluent.Kafka" Version="2.14.2" />
+		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
 		<PackageReference Include="Prism.Unity" Version="9.0.537" />
 	</ItemGroup>
 </Project>

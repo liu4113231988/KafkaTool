@@ -1,4 +1,5 @@
-﻿using KafkaToolWpf.ViewModels;
+using KafkaToolWpf.Services;
+using KafkaToolWpf.ViewModels;
 using KafkaToolWpf.Views;
 using Prism.Dialogs;
 using Prism.Ioc;
@@ -19,8 +20,14 @@ namespace KafkaToolWpf
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
-            //containerRegistry.RegisterSingleton<IMessageService, MessageService>();
+            // Register services
+            containerRegistry.RegisterSingleton<IKafkaService, KafkaService>();
+
+            // Register dialogs
             containerRegistry.RegisterDialog<TopicListDialogWindow, TopicListDialogViewModel>();
+            containerRegistry.RegisterDialog<CreateTopicDialogWindow, CreateTopicDialogViewModel>();
+            containerRegistry.RegisterDialog<BrowseMessageDialogWindow, BrowseMessageDialogViewModel>();
+            containerRegistry.RegisterDialog<ConnectionConfigDialogWindow, ConnectionConfigDialogViewModel>();
         }
 
         protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)

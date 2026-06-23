@@ -1,0 +1,101 @@
+<UserControl x:Class="KafkaToolWpf.Views.ConnectionConfigDialogWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d" 
+             Width="600" Height="550">
+    <prism:Dialog.WindowStyle>
+        <Style TargetType="Window">
+            <Setter Property="prism:Dialog.WindowStartupLocation" Value="CenterScreen" />
+            <Setter Property="ShowInTaskbar" Value="False"/>
+            <Setter Property="Title" Value="连接管理"/>
+        </Style>
+    </prism:Dialog.WindowStyle>
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Left: Connection list -->
+        <Grid Grid.Column="0" Margin="0 0 10 0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="连接列表" FontSize="14" FontWeight="Bold" Margin="0 0 0 5"/>
+            <ListBox Grid.Row="1" ItemsSource="{Binding Connections}" 
+                     SelectedItem="{Binding SelectedConnection}" DisplayMemberPath="Name"/>
+            <Button Grid.Row="2" Command="{Binding DeleteConnectionCommand}" Content="删除选中" FontSize="12" Height="24" Margin="0 5 0 0"/>
+        </Grid>
+
+        <!-- Right: Connection edit form -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="0 0 0 10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="名称：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditName}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Broker地址：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditBootstrapServers}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <Separator Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0 10"/>
+
+                <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Content="启用 SASL 认证" 
+                          IsChecked="{Binding EditUseSasl}" Margin="0 5" FontSize="13"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="SASL机制：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="4" Grid.Column="1" SelectedItem="{Binding EditSaslMechanism}" FontSize="13" Height="26" Margin="0 5">
+                    <ComboBoxItem Content="PLAIN"/>
+                    <ComboBoxItem Content="SCRAM-SHA-256"/>
+                    <ComboBoxItem Content="SCRAM-SHA-512"/>
+                    <ComboBoxItem Content="GSSAPI"/>
+                </ComboBox>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="用户名：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditSaslUsername}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="密码：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditSaslPassword}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <Separator Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Margin="0 10"/>
+
+                <CheckBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Content="启用 SSL" 
+                          IsChecked="{Binding EditUseSsl}" Margin="0 5" FontSize="13"/>
+                <CheckBox Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Content="跳过 SSL 验证" 
+                          IsChecked="{Binding EditSslSkipVerify}" Margin="0 5" FontSize="13"/>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Bottom buttons -->
+        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 10 0 0">
+            <Button Command="{Binding AddConnectionCommand}" Content="添加连接" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
+            <Button Command="{Binding SelectAndCloseCommand}" Content="选择并关闭" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
+            <Button Command="{Binding SaveCommand}" Content="保存" FontSize="13" Width="70" Height="28"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
