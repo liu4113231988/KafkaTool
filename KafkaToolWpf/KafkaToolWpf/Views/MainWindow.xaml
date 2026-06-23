@@ -188,11 +188,67 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="Topic 详情 (在 Topic 列表中选择后点击查看详情)" FontSize="13" Foreground="Gray"/>
+                        <TextBlock Grid.Row="0" Text="Topic 详情" FontSize="16" FontWeight="Bold"/>
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <Grid x:Name="TopicDetailPanel">
-                                <!-- Details shown in MessageBox for now -->
-                            </Grid>
+                            <StackPanel Margin="0 8 0 0">
+                                <TextBlock Text="在 Topic 列表中选择后点击“查看详情”" FontSize="13" Foreground="Gray"
+                                           Visibility="{Binding TopicDetail, TargetNullValue=Visible}"/>
+
+                                <Border BorderBrush="#EEE" BorderThickness="1" Padding="12" Background="#FAFAFA">
+                                    <StackPanel>
+                                        <Grid Margin="0 0 0 10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Topic：" FontWeight="Bold" FontSize="13"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TopicDetail.TopicName}" FontSize="13"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="分区数：" FontWeight="Bold" FontSize="13" Margin="0 6 0 0"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TopicDetail.PartitionCount}" FontSize="13" Margin="0 6 0 0"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="副本因子：" FontWeight="Bold" FontSize="13" Margin="0 6 0 0"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TopicDetail.ReplicationFactor}" FontSize="13" Margin="0 6 0 0"/>
+                                        </Grid>
+
+                                        <TextBlock Text="分区详情" FontSize="14" FontWeight="Bold" Margin="0 0 0 6"/>
+                                        <DataGrid ItemsSource="{Binding TopicDetail.Partitions}" AutoGenerateColumns="False"
+                                                  IsReadOnly="True" RowHeight="26" MinHeight="160">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="分区" Width="60" Binding="{Binding PartitionId}"/>
+                                                <DataGridTextColumn Header="Leader" Width="70" Binding="{Binding Leader}"/>
+                                                <DataGridTextColumn Header="副本" Width="110" Binding="{Binding ReplicasText}"/>
+                                                <DataGridTextColumn Header="ISR" Width="110" Binding="{Binding InSyncReplicasText}"/>
+                                                <DataGridTextColumn Header="Earliest" Width="90" Binding="{Binding EarliestOffset}"/>
+                                                <DataGridTextColumn Header="Latest" Width="90" Binding="{Binding LatestOffset}"/>
+                                                <DataGridTextColumn Header="消息数" Width="90" Binding="{Binding MessageCount}"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
+                                        <TextBlock Text="配置" FontSize="14" FontWeight="Bold" Margin="0 12 0 6"/>
+                                        <ItemsControl ItemsSource="{Binding TopicDetail.Configs}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0 2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="220"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Key}" FontFamily="Consolas" FontSize="12"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                         </ScrollViewer>
                     </Grid>
                 </Grid>

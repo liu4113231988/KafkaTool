@@ -22,6 +22,8 @@ namespace KafkaToolWpf.ViewModels
 {
     public partial class MainWindowViewModel : BindableBase
     {
+        private const int MaxConsumerMessageChars = 50000;
+
         private readonly IKafkaService _kafkaService;
         private readonly IDialogService _dialogService;
 
@@ -31,7 +33,7 @@ namespace KafkaToolWpf.ViewModels
 
         #region Connection
 
-        private string _kafkaBootstrapServer = "192.168.1.100:9092";
+        private string _kafkaBootstrapServer = "localhost:9092";
         public string KafkaBootstrapServer
         {
             get => _kafkaBootstrapServer;
@@ -368,11 +370,11 @@ namespace KafkaToolWpf.ViewModels
             IsConsumerReadonly = false;
             IsConsuming = false;
 
-            // Init default connections
+            // Init a neutral default connection that works out of the box for local Kafka setups.
             Connections.Add(new ConnectionConfig
             {
-                Name = "默认集群",
-                BootstrapServers = "192.168.1.100:9092"
+                Name = "本地 Kafka",
+                BootstrapServers = "localhost:9092"
             });
             CurrentConnection = Connections[0];
 
@@ -414,9 +416,11 @@ namespace KafkaToolWpf.ViewModels
 
         private async Task ManageConnectionsAsync()
         {
+            var currentConnectionName = CurrentConnection?.Name;
             var param = new DialogParameters
             {
-                { "connections", Connections }
+                { "connections", Connections },
+                { "selectedConnection", currentConnectionName }
             };
 
             var result = await _dialogService.ShowDialogAsync("ConnectionConfigDialogWindow", param);
@@ -432,6 +436,19 @@ namespace KafkaToolWpf.ViewModels
                         Connections.Clear();
                         foreach (var c in savedConnections)
                             Connections.Add(c);
+
+                        var restoredCurrent = Connections.FirstOrDefault(c => c.Name == currentConnectionName)
+                            ?? Connections.FirstOrDefault();
+
+                        if (restoredCurrent != null)
+                        {
+                            CurrentConnection = restoredCurrent;
+                            KafkaBootstrapServer = restoredCurrent.BootstrapServers;
+                        }
+                        else
+                        {
+                            CurrentConnection = null;
+                        }
                     }
 
                     if (action == "select")
@@ -465,6 +482,29 @@ namespace KafkaToolWpf.ViewModels
             }
         }
 
+        private void ApplySslFileConfig(ClientConfig config)
+        {
+            if (CurrentConnection == null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(CurrentConnection.SslCaLocation))
+            {
+                config.SslCaLocation = CurrentConnection.SslCaLocation;
+            }
+
+            if (!string.IsNullOrWhiteSpace(CurrentConnection.SslCertificateLocation))
+            {
+                config.SslCertificateLocation = CurrentConnection.SslCertificateLocation;
+            }
+
+            if (!string.IsNullOrWhiteSpace(CurrentConnection.SslKeyLocation))
+            {
+                config.SslKeyLocation = CurrentConnection.SslKeyLocation;
+            }
+        }
+
         private void ApplySaslConfig(AdminClientConfig config)
         {
             if (CurrentConnection?.UseSasl == true)
@@ -487,6 +527,8 @@ namespace KafkaToolWpf.ViewModels
             {
                 config.SecurityProtocol = SecurityProtocol.Ssl;
             }
+
+            ApplySslFileConfig(config);
 
             if (CurrentConnection?.SslSkipVerify == true)
             {
@@ -516,6 +558,8 @@ namespace KafkaToolWpf.ViewModels
             {
                 config.SecurityProtocol = SecurityProtocol.Ssl;
             }
+
+            ApplySslFileConfig(config);
         }
 
         private void ApplySaslConfig(ConsumerConfig config)
@@ -540,6 +584,8 @@ namespace KafkaToolWpf.ViewModels
             {
                 config.SecurityProtocol = SecurityProtocol.Ssl;
             }
+
+            ApplySslFileConfig(config);
         }
 
         #endregion
@@ -637,7 +683,7 @@ namespace KafkaToolWpf.ViewModels
                             // Use BeginInvoke with lower priority to avoid blocking the UI thread
                             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
                             {
-                                ConsumerMessage += msg + "\r\n";
+                                AppendConsumerMessage(msg);
                                 // throttle frequent ScrollToEnd calls to reduce UI work
                                 _uiUpdateCounter++;
                                 if ((_uiUpdateCounter % 5) == 0)
@@ -670,7 +716,11 @@ namespace KafkaToolWpf.ViewModels
                         IsConsumerReadonly = false;
                         IsConsuming = false;
                         ConsumerErrorMessage = $"消费异常: {ex.Message}";
-                        MessageBox.Show(ex.StackTrace);
+                        MessageBox.Show(
+                            $"消费异常: {ex.Message}\n请检查 Topic、消费者组、网络连接和认证配置。",
+                            "消费失败",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
                     });
                 }
                 finally
@@ -695,6 +745,25 @@ namespace KafkaToolWpf.ViewModels
             ConsumerErrorMessage = "";
             ConsumerTooltipMsg = "已取消订阅";
             ClearTooltipAfterDelay(5000);
+        }
+
+        private void AppendConsumerMessage(string message)
+        {
+            var next = string.IsNullOrEmpty(ConsumerMessage)
+                ? message + "\r\n"
+                : ConsumerMessage + message + "\r\n";
+
+            if (next.Length > MaxConsumerMessageChars)
+            {
+                next = next[^MaxConsumerMessageChars..];
+                var firstLineBreak = next.IndexOf('\n');
+                if (firstLineBreak >= 0 && firstLineBreak < next.Length - 1)
+                {
+                    next = next[(firstLineBreak + 1)..];
+                }
+            }
+
+            ConsumerMessage = next;
         }
 
         private async void ClearTooltipAfterDelay(int delayMs)
@@ -831,6 +900,7 @@ namespace KafkaToolWpf.ViewModels
         {
             if (SelectedTopic == null) return;
 
+            TopicStatus = $"正在加载 Topic '{SelectedTopic.TopicName}' 的详情...";
             try
             {
                 TopicDetail = await _kafkaService.GetTopicDetailAsync(
@@ -838,30 +908,12 @@ namespace KafkaToolWpf.ViewModels
 
                 if (TopicDetail.Partitions.Count > 0)
                     SelectedPartition = TopicDetail.Partitions[0];
-
-                // Switch to the first tab showing details (we'll show in a dialog for now)
-                var detailText = $"Topic: {TopicDetail.TopicName}\n" +
-                                 $"分区数: {TopicDetail.PartitionCount}\n" +
-                                 $"副本因子: {TopicDetail.ReplicationFactor}\n\n" +
-                                 "分区详情:\n" +
-                                 string.Join("\n", TopicDetail.Partitions.Select(p =>
-                                     $"  分区 {p.PartitionId}: Leader={p.Leader}, " +
-                                     $"副本=[{string.Join(",", p.Replicas)}], " +
-                                     $"ISR=[{string.Join(",", p.InSyncReplicas)}], " +
-                                     $"偏移: {p.EarliestOffset ?? 0} - {p.LatestOffset ?? 0} " +
-                                     $"({p.MessageCount} 条消息)"));
-
-                if (TopicDetail.Configs.Count > 0)
-                {
-                    detailText += "\n\n配置:\n" +
-                        string.Join("\n", TopicDetail.Configs.Select(c => $"  {c.Key} = {c.Value}"));
-                }
-
-                MessageBox.Show(detailText, $"Topic 详情 - {TopicDetail.TopicName}",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                TopicStatus = $"✓ 已加载 Topic '{TopicDetail.TopicName}' 的详情";
             }
             catch (Exception ex)
             {
+                TopicDetail = null;
+                SelectedPartition = null;
                 TopicStatus = $"✗ 获取详情失败: {ex.Message}";
             }
         }

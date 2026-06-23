@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace KafkaToolWpf.Models
 {
@@ -21,6 +22,8 @@ namespace KafkaToolWpf.Models
         public long? EarliestOffset { get; set; }
         public long? LatestOffset { get; set; }
         public long MessageCount => (LatestOffset ?? 0) - (EarliestOffset ?? 0);
+        public string ReplicasText => string.Join(", ", Replicas);
+        public string InSyncReplicasText => string.Join(", ", InSyncReplicas);
     }
 
     public class BrokerInfo
@@ -81,6 +84,10 @@ namespace KafkaToolWpf.Models
         public Dictionary<string, string> Headers { get; set; } = new();
         public string FormattedTimestamp =>
             DateTimeOffset.FromUnixTimeMilliseconds(Timestamp).LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+        public string FormattedHeaders =>
+            Headers == null || Headers.Count == 0
+                ? string.Empty
+                : string.Join("; ", Headers.Select(h => $"{h.Key}={h.Value}"));
     }
 
     public class ConnectionConfig

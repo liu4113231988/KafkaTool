@@ -2,12 +2,16 @@ using KafkaToolWpf.Models;
 using Prism.Commands;
 using Prism.Dialogs;
 using Prism.Mvvm;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace KafkaToolWpf.ViewModels
 {
     public class ConnectionConfigDialogViewModel : BindableBase, IDialogAware
     {
+        private string _initialSelectedConnectionName;
+
         private ObservableCollection<ConnectionConfig> _connections = new();
         public ObservableCollection<ConnectionConfig> Connections
         {
@@ -31,8 +35,13 @@ namespace KafkaToolWpf.ViewModels
                     EditSaslUsername = value.SaslUsername;
                     EditSaslPassword = value.SaslPassword;
                     EditUseSsl = value.UseSsl;
+                    EditSslCaLocation = value.SslCaLocation;
+                    EditSslCertificateLocation = value.SslCertificateLocation;
+                    EditSslKeyLocation = value.SslKeyLocation;
                     EditSslSkipVerify = value.SslSkipVerify;
                 }
+
+                RaiseActionText();
             }
         }
 
@@ -85,6 +94,27 @@ namespace KafkaToolWpf.ViewModels
             set => SetProperty(ref _editUseSsl, value);
         }
 
+        private string _editSslCaLocation;
+        public string EditSslCaLocation
+        {
+            get => _editSslCaLocation;
+            set => SetProperty(ref _editSslCaLocation, value);
+        }
+
+        private string _editSslCertificateLocation;
+        public string EditSslCertificateLocation
+        {
+            get => _editSslCertificateLocation;
+            set => SetProperty(ref _editSslCertificateLocation, value);
+        }
+
+        private string _editSslKeyLocation;
+        public string EditSslKeyLocation
+        {
+            get => _editSslKeyLocation;
+            set => SetProperty(ref _editSslKeyLocation, value);
+        }
+
         private bool _editSslSkipVerify;
         public bool EditSslSkipVerify
         {
@@ -96,6 +126,16 @@ namespace KafkaToolWpf.ViewModels
         public DelegateCommand DeleteConnectionCommand { get; }
         public DelegateCommand SaveCommand { get; }
         public DelegateCommand SelectAndCloseCommand { get; }
+
+        public IReadOnlyList<string> SaslMechanismOptions { get; } = new[]
+        {
+            "PLAIN",
+            "SCRAM-SHA-256",
+            "SCRAM-SHA-512",
+            "GSSAPI"
+        };
+
+        public string UpsertButtonText => SelectedConnection == null ? "添加连接" : "保存编辑";
 
         public ConnectionConfigDialogViewModel()
         {
@@ -110,20 +150,28 @@ namespace KafkaToolWpf.ViewModels
             if (string.IsNullOrWhiteSpace(EditName) || string.IsNullOrWhiteSpace(EditBootstrapServers))
                 return;
 
-            var conn = new ConnectionConfig
-            {
-                Name = EditName,
-                BootstrapServers = EditBootstrapServers,
-                UseSasl = EditUseSasl,
-                SaslMechanism = EditSaslMechanism,
-                SaslUsername = EditSaslUsername,
-                SaslPassword = EditSaslPassword,
-                UseSsl = EditUseSsl,
-                SslSkipVerify = EditSslSkipVerify
-            };
+            var conn = BuildConnectionFromEditor();
+            var existing = SelectedConnection ?? Connections.FirstOrDefault(c =>
+                c.Name == conn.Name && !ReferenceEquals(c, SelectedConnection));
 
-            Connections.Add(conn);
-            ClearEditFields();
+            if (existing == null)
+            {
+                Connections.Add(conn);
+                SelectedConnection = conn;
+                return;
+            }
+
+            existing.Name = conn.Name;
+            existing.BootstrapServers = conn.BootstrapServers;
+            existing.UseSasl = conn.UseSasl;
+            existing.SaslMechanism = conn.SaslMechanism;
+            existing.SaslUsername = conn.SaslUsername;
+            existing.SaslPassword = conn.SaslPassword;
+            existing.UseSsl = conn.UseSsl;
+            existing.SslSkipVerify = conn.SslSkipVerify;
+
+            RaisePropertyChanged(nameof(Connections));
+            RaiseActionText();
         }
 
         private void DeleteConnection()
@@ -141,7 +189,7 @@ namespace KafkaToolWpf.ViewModels
             RequestClose.Invoke(new DialogParameters
             {
                 { "action", "save" },
-                { "connections", Connections }
+                { "connections", CloneConnections(Connections) }
             });
         }
 
@@ -151,6 +199,7 @@ namespace KafkaToolWpf.ViewModels
             RequestClose.Invoke(new DialogParameters
             {
                 { "action", "select" },
+                { "connections", CloneConnections(Connections) },
                 { "selectedConnection", SelectedConnection.Name }
             });
         }
@@ -164,7 +213,57 @@ namespace KafkaToolWpf.ViewModels
             EditSaslUsername = "";
             EditSaslPassword = "";
             EditUseSsl = false;
+            EditSslCaLocation = "";
+            EditSslCertificateLocation = "";
+            EditSslKeyLocation = "";
             EditSslSkipVerify = false;
+            RaiseActionText();
+        }
+
+        private ConnectionConfig BuildConnectionFromEditor()
+        {
+            return new ConnectionConfig
+            {
+                Name = EditName?.Trim(),
+                BootstrapServers = EditBootstrapServers?.Trim(),
+                UseSasl = EditUseSasl,
+                SaslMechanism = EditSaslMechanism,
+                SaslUsername = EditSaslUsername?.Trim(),
+                SaslPassword = EditSaslPassword,
+                UseSsl = EditUseSsl,
+                SslCaLocation = EditSslCaLocation?.Trim(),
+                SslCertificateLocation = EditSslCertificateLocation?.Trim(),
+                SslKeyLocation = EditSslKeyLocation?.Trim(),
+                SslSkipVerify = EditSslSkipVerify
+            };
+        }
+
+        private static ObservableCollection<ConnectionConfig> CloneConnections(IEnumerable<ConnectionConfig> source)
+        {
+            return new ObservableCollection<ConnectionConfig>(source.Select(CloneConnection));
+        }
+
+        private static ConnectionConfig CloneConnection(ConnectionConfig source)
+        {
+            return new ConnectionConfig
+            {
+                Name = source.Name,
+                BootstrapServers = source.BootstrapServers,
+                UseSasl = source.UseSasl,
+                SaslMechanism = source.SaslMechanism,
+                SaslUsername = source.SaslUsername,
+                SaslPassword = source.SaslPassword,
+                UseSsl = source.UseSsl,
+                SslCaLocation = source.SslCaLocation,
+                SslCertificateLocation = source.SslCertificateLocation,
+                SslKeyLocation = source.SslKeyLocation,
+                SslSkipVerify = source.SslSkipVerify
+            };
+        }
+
+        private void RaiseActionText()
+        {
+            RaisePropertyChanged(nameof(UpsertButtonText));
         }
 
         public DialogCloseListener RequestClose { get; set; } = new DialogCloseListener();
@@ -175,7 +274,13 @@ namespace KafkaToolWpf.ViewModels
         {
             var connections = parameters.GetValue<ObservableCollection<ConnectionConfig>>("connections");
             if (connections != null)
-                Connections = connections;
+                Connections = CloneConnections(connections);
+
+            _initialSelectedConnectionName = parameters.GetValue<string>("selectedConnection");
+            if (!string.IsNullOrWhiteSpace(_initialSelectedConnectionName))
+            {
+                SelectedConnection = Connections.FirstOrDefault(c => c.Name == _initialSelectedConnectionName);
+            }
         }
     }
 }

@@ -10,6 +10,30 @@ namespace KafkaToolWpf.Services
 {
     public class KafkaService : IKafkaService
     {
+        private static void CopyClientConfigValues(ClientConfig source, ClientConfig target)
+        {
+            foreach (var entry in source)
+            {
+                target.Set(entry.Key, entry.Value);
+            }
+        }
+
+        private ConsumerConfig BuildConsumerConfigFromAdmin(AdminClientConfig adminConfig, string groupId,
+            Action<ConsumerConfig> configAction = null)
+        {
+            var config = BuildConsumerConfig(adminConfig.BootstrapServers, groupId);
+            CopyClientConfigValues(adminConfig, config);
+            configAction?.Invoke(config);
+            return config;
+        }
+
+        private AdminClientConfig BuildAdminConfigFromConsumer(ConsumerConfig consumerConfig)
+        {
+            var config = BuildAdminConfig(consumerConfig.BootstrapServers);
+            CopyClientConfigValues(consumerConfig, config);
+            return config;
+        }
+
         private AdminClientConfig BuildAdminConfig(string bootstrapServers, Action<AdminClientConfig> configAction = null)
         {
             var config = new AdminClientConfig { BootstrapServers = bootstrapServers };
@@ -47,10 +71,11 @@ namespace KafkaToolWpf.Services
             var config = BuildAdminConfig(bootstrapServers, configAction);
             using var adminClient = new AdminClientBuilder(config).Build();
             var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+            var clusterDescription = adminClient.DescribeClusterAsync(new DescribeClusterOptions()).GetAwaiter().GetResult();
 
             var cluster = new ClusterInfo
             {
-                ClusterId = metadata.OriginatingBrokerName,
+                ClusterId = clusterDescription.ClusterId ?? metadata.OriginatingBrokerName,
                 ControllerId = metadata.OriginatingBrokerId,
                 Brokers = metadata.Brokers.Select(b => new BrokerInfo
                 {
@@ -96,8 +121,8 @@ namespace KafkaToolWpf.Services
 
         public async Task<TopicInfo> GetTopicDetailAsync(string bootstrapServers, string topicName, Action<AdminClientConfig> configAction = null)
         {
-            var config = BuildAdminConfig(bootstrapServers, configAction);
-            using var adminClient = new AdminClientBuilder(config).Build();
+            var adminConfig = BuildAdminConfig(bootstrapServers, configAction);
+            using var adminClient = new AdminClientBuilder(adminConfig).Build();
 
             var metadata = adminClient.GetMetadata(topicName, TimeSpan.FromSeconds(10));
             var topic = metadata.Topics.FirstOrDefault(t => t.Topic == topicName);
@@ -124,11 +149,14 @@ namespace KafkaToolWpf.Services
             }
             catch { /* Config API may not be available */ }
 
-            // Get watermark offsets using a consumer
-            using var consumer = new ConsumerBuilder<Ignore, Ignore>(new ConsumerConfig
+            // Reuse the same security settings so topic detail works for SASL/SSL clusters too.
+            var consumerConfig = BuildConsumerConfigFromAdmin(adminConfig, $"kafka-topic-detail-{Guid.NewGuid():N}", cfg =>
             {
-                BootstrapServers = bootstrapServers
-            }).Build();
+                cfg.EnableAutoCommit = false;
+                cfg.AutoOffsetReset = AutoOffsetReset.Earliest;
+            });
+
+            using var consumer = new ConsumerBuilder<Ignore, Ignore>(consumerConfig).Build();
 
             var partitions = topic.Partitions.Select(p =>
             {
@@ -199,87 +227,152 @@ namespace KafkaToolWpf.Services
             return true;
         }
 
-        public Task<List<ConsumerGroupInfo>> GetConsumerGroupsAsync(string bootstrapServers, Action<AdminClientConfig> configAction = null)
+        public async Task<List<ConsumerGroupInfo>> GetConsumerGroupsAsync(string bootstrapServers, Action<AdminClientConfig> configAction = null)
         {
             var config = BuildAdminConfig(bootstrapServers, configAction);
             using var adminClient = new AdminClientBuilder(config).Build();
 
-            var groups = adminClient.ListGroups(TimeSpan.FromSeconds(10));
+            var groups = adminClient.ListGroups(TimeSpan.FromSeconds(10))
+                .Where(g => g.ProtocolType == "consumer")
+                .ToList();
+
+            if (groups.Count == 0)
+            {
+                return new List<ConsumerGroupInfo>();
+            }
+
+            var descriptions = await adminClient.DescribeConsumerGroupsAsync(
+                groups.Select(g => g.Group),
+                new DescribeConsumerGroupsOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(10)
+                });
+
+            var descriptionMap = descriptions.ConsumerGroupDescriptions
+                .ToDictionary(d => d.GroupId, d => d);
+
             var result = groups.Select(g =>
             {
-                var members = g.Members?.Select(m => new MemberInfo
+                descriptionMap.TryGetValue(g.Group, out var description);
+                var members = description?.Members?.Select(m => new MemberInfo
                 {
-                    MemberId = m.MemberId,
+                    MemberId = m.ConsumerId,
                     ClientId = m.ClientId,
-                    Host = m.ClientHost,
-                    AssignedPartitions = new List<string> { $"{g.Group}" }
+                    Host = m.Host,
+                    AssignedPartitions = FormatAssignedPartitions(m.Assignment?.TopicPartitions)
                 }).ToList() ?? new List<MemberInfo>();
 
                 return new ConsumerGroupInfo
                 {
                     GroupId = g.Group,
-                    State = g.State,
+                    State = description?.State.ToString() ?? g.State,
                     ProtocolType = g.ProtocolType,
                     Members = members
                 };
             }).ToList();
 
-            return Task.FromResult(result);
+            return result;
         }
 
-        public Task<List<ConsumerGroupDetail>> GetConsumerGroupDetailsAsync(string bootstrapServers, string groupId, Action<AdminClientConfig> configAction = null)
+        public async Task<List<ConsumerGroupDetail>> GetConsumerGroupDetailsAsync(string bootstrapServers, string groupId, Action<AdminClientConfig> configAction = null)
         {
-            var config = BuildAdminConfig(bootstrapServers, configAction);
-            using var adminClient = new AdminClientBuilder(config).Build();
+            var adminConfig = BuildAdminConfig(bootstrapServers, configAction);
+            using var adminClient = new AdminClientBuilder(adminConfig).Build();
 
-            var consumerConfig = new ConsumerConfig
+            var descriptionResult = await adminClient.DescribeConsumerGroupsAsync(
+                new[] { groupId },
+                new DescribeConsumerGroupsOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(10)
+                });
+
+            var description = descriptionResult.ConsumerGroupDescriptions.FirstOrDefault();
+            if (description == null)
             {
-                BootstrapServers = bootstrapServers,
-                GroupId = groupId,
-                EnableAutoCommit = false,
-                AutoOffsetReset = AutoOffsetReset.Latest
-            };
+                return new List<ConsumerGroupDetail>();
+            }
+
+            if (description.Error.Code != ErrorCode.NoError)
+            {
+                throw new Exception(description.Error.Reason);
+            }
+
+            var memberAssignments = description.Members
+                .SelectMany(member => (member.Assignment?.TopicPartitions ?? Enumerable.Empty<TopicPartition>())
+                    .Select(tp => new
+                    {
+                        TopicPartition = tp,
+                        member.ClientId,
+                        member.Host
+                    }))
+                .GroupBy(x => x.TopicPartition)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var topicPartitions = memberAssignments.Keys.ToList();
+            if (topicPartitions.Count == 0)
+            {
+                var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+                topicPartitions = metadata.Topics
+                    .Where(t => t.Error.Code == ErrorCode.NoError && !t.Topic.StartsWith("__"))
+                    .SelectMany(t => t.Partitions.Select(p => new TopicPartition(t.Topic, p.PartitionId)))
+                    .ToList();
+            }
+
+            if (topicPartitions.Count == 0)
+            {
+                return new List<ConsumerGroupDetail>();
+            }
+
+            var offsetsResult = await adminClient.ListConsumerGroupOffsetsAsync(
+                new[] { new ConsumerGroupTopicPartitions(groupId, topicPartitions) },
+                new ListConsumerGroupOffsetsOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(10)
+                });
+
+            var consumerConfig = BuildConsumerConfigFromAdmin(adminConfig, $"kafka-group-detail-{Guid.NewGuid():N}", cfg =>
+            {
+                cfg.EnableAutoCommit = false;
+                cfg.AutoOffsetReset = AutoOffsetReset.Earliest;
+            });
 
             using var consumer = new ConsumerBuilder<Ignore, Ignore>(consumerConfig).Build();
-
-            // Get metadata to list all topics and partitions
-            var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
             var details = new List<ConsumerGroupDetail>();
 
-            foreach (var topic in metadata.Topics.Where(t => !t.Topic.StartsWith("__")))
+            foreach (var partitionOffset in offsetsResult.SelectMany(r => r.Partitions))
             {
-                var topicPartitions = topic.Partitions.Select(p =>
-                    new TopicPartition(topic.Topic, p.PartitionId)).ToList();
+                if (partitionOffset.Error.Code != ErrorCode.NoError || partitionOffset.Offset == Offset.Unset)
+                {
+                    continue;
+                }
 
                 try
                 {
-                    var committed = consumer.Committed(topicPartitions, TimeSpan.FromSeconds(10));
-                    foreach (var cp in committed)
-                    {
-                        if (cp.Offset.Value == Offset.Unset) continue;
+                    var watermarks = consumer.GetWatermarkOffsets(partitionOffset.TopicPartition);
+                    memberAssignments.TryGetValue(partitionOffset.TopicPartition, out var owner);
 
-                        try
-                        {
-                            var watermarks = consumer.GetWatermarkOffsets(cp.TopicPartition);
-                            details.Add(new ConsumerGroupDetail
-                            {
-                                GroupId = groupId,
-                                Topic = cp.TopicPartition.Topic,
-                                Partition = cp.TopicPartition.Partition,
-                                CurrentOffset = cp.Offset.Value,
-                                LogEndOffset = watermarks.High,
-                                ClientId = "",
-                                Host = ""
-                            });
-                        }
-                        catch { }
-                    }
+                    details.Add(new ConsumerGroupDetail
+                    {
+                        GroupId = groupId,
+                        Topic = partitionOffset.TopicPartition.Topic,
+                        Partition = partitionOffset.TopicPartition.Partition,
+                        CurrentOffset = partitionOffset.Offset.Value,
+                        LogEndOffset = watermarks.High,
+                        ClientId = owner?.ClientId ?? string.Empty,
+                        Host = owner?.Host ?? string.Empty
+                    });
                 }
-                catch { }
+                catch
+                {
+                    // Skip partitions whose watermark cannot be read.
+                }
             }
 
             consumer.Close();
-            return Task.FromResult(details);
+            return details
+                .OrderBy(d => d.Topic)
+                .ThenBy(d => d.Partition)
+                .ToList();
         }
 
         public async Task<bool> DeleteConsumerGroupAsync(string bootstrapServers, string groupId, Action<AdminClientConfig> configAction = null)
@@ -349,27 +442,30 @@ namespace KafkaToolWpf.Services
             config.EnableAutoCommit = false;
             config.AutoOffsetReset = AutoOffsetReset.Earliest;
 
-            using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build();
+            var adminConfig = BuildAdminConfigFromConsumer(config);
+            using var adminClient = new AdminClientBuilder(adminConfig).Build();
             var metadata = adminClient.GetMetadata(topic, TimeSpan.FromSeconds(10));
             var topicMeta = metadata.Topics.FirstOrDefault(t => t.Topic == topic);
             if (topicMeta == null) return Task.FromResult(new List<MessageRecord>());
 
             var messages = new List<MessageRecord>();
             using var consumer = new ConsumerBuilder<string, string>(config).Build();
+            var assignments = new List<TopicPartitionOffset>();
 
             foreach (var p in topicMeta.Partitions)
             {
                 var tp = new TopicPartition(topic, p.PartitionId);
                 var tsOffset = new Timestamp(timestamp);
-                // OffsetsForTimes may not exist in all Consumer versions; use seeking by timestamp offset
+
                 try
                 {
                     var offsets = consumer.OffsetsForTimes(
                         new[] { new TopicPartitionTimestamp(tp, tsOffset) },
                         TimeSpan.FromSeconds(10));
+
                     if (offsets.Count > 0 && offsets[0].Offset != Offset.Unset)
                     {
-                        consumer.Assign(new TopicPartitionOffset(offsets[0].TopicPartition, offsets[0].Offset));
+                        assignments.Add(new TopicPartitionOffset(offsets[0].TopicPartition, offsets[0].Offset));
                     }
                 }
                 catch
@@ -378,14 +474,30 @@ namespace KafkaToolWpf.Services
                 }
             }
 
-            for (int i = 0; i < count; i++)
+            if (assignments.Count == 0)
+            {
+                consumer.Close();
+                return Task.FromResult(messages);
+            }
+
+            consumer.Assign(assignments);
+
+            int emptyPolls = 0;
+            int maxEmptyPolls = Math.Max(assignments.Count * 3, 6);
+
+            while (messages.Count < count && emptyPolls < maxEmptyPolls)
             {
                 try
                 {
                     var result = consumer.Consume(TimeSpan.FromSeconds(2));
-                    if (result == null || result.IsPartitionEOF) continue;
+                    if (result == null || result.IsPartitionEOF)
+                    {
+                        emptyPolls++;
+                        continue;
+                    }
 
                     messages.Add(ToMessageRecord(result));
+                    emptyPolls = 0;
                 }
                 catch (ConsumeException) { break; }
             }
@@ -445,30 +557,34 @@ namespace KafkaToolWpf.Services
         public Task<bool> ResetConsumerGroupOffsetAsync(string bootstrapServers, string groupId, string topic,
             long? offset, Action<AdminClientConfig> configAction = null)
         {
-            var config = BuildAdminConfig(bootstrapServers, configAction);
-            using var adminClient = new AdminClientBuilder(config).Build();
+            var adminConfig = BuildAdminConfig(bootstrapServers, configAction);
+            using var adminClient = new AdminClientBuilder(adminConfig).Build();
 
             var metadata = adminClient.GetMetadata(topic, TimeSpan.FromSeconds(10));
             var topicMeta = metadata.Topics.FirstOrDefault(t => t.Topic == topic);
             if (topicMeta == null) throw new Exception($"Topic '{topic}' not found.");
 
-            using var consumer = new ConsumerBuilder<Ignore, Ignore>(new ConsumerConfig
+            var consumerConfig = BuildConsumerConfigFromAdmin(adminConfig, groupId, cfg =>
             {
-                BootstrapServers = bootstrapServers,
-                GroupId = groupId,
-                EnableAutoCommit = false
-            }).Build();
+                cfg.EnableAutoCommit = false;
+                cfg.AutoOffsetReset = AutoOffsetReset.Earliest;
+            });
 
-            var tps = topicMeta.Partitions.Select(p =>
-                new TopicPartition(topic, p.PartitionId)).ToList();
+            using var consumer = new ConsumerBuilder<Ignore, Ignore>(consumerConfig).Build();
+
+            var topicPartitions = topicMeta.Partitions
+                .Select(p => new TopicPartition(topic, p.PartitionId))
+                .ToList();
 
             var targetOffset = offset ?? 0L;
-            foreach (var tp in tps)
+            var offsetsToCommit = new List<TopicPartitionOffset>(topicPartitions.Count);
+
+            foreach (var tp in topicPartitions)
             {
-                consumer.Assign(new TopicPartitionOffset(tp, targetOffset));
-                consumer.Commit();
+                offsetsToCommit.Add(new TopicPartitionOffset(tp, new Offset(targetOffset)));
             }
 
+            consumer.Commit(offsetsToCommit);
             consumer.Close();
             return Task.FromResult(true);
         }
@@ -490,6 +606,13 @@ namespace KafkaToolWpf.Services
                     .ToDictionary(h => h.Key, h => System.Text.Encoding.UTF8.GetString(h.Value))
                     ?? new Dictionary<string, string>()
             };
+        }
+
+        private static List<string> FormatAssignedPartitions(IEnumerable<TopicPartition> topicPartitions)
+        {
+            return topicPartitions?
+                .Select(tp => $"{tp.Topic}[{tp.Partition}]")
+                .ToList() ?? new List<string>();
         }
     }
 }

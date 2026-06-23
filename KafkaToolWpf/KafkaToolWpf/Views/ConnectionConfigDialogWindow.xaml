@@ -51,6 +51,9 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="100"/>
@@ -69,12 +72,10 @@
                           IsChecked="{Binding EditUseSasl}" Margin="0 5" FontSize="13"/>
 
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="SASL机制：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
-                <ComboBox Grid.Row="4" Grid.Column="1" SelectedItem="{Binding EditSaslMechanism}" FontSize="13" Height="26" Margin="0 5">
-                    <ComboBoxItem Content="PLAIN"/>
-                    <ComboBoxItem Content="SCRAM-SHA-256"/>
-                    <ComboBoxItem Content="SCRAM-SHA-512"/>
-                    <ComboBoxItem Content="GSSAPI"/>
-                </ComboBox>
+                <ComboBox Grid.Row="4" Grid.Column="1"
+                          ItemsSource="{Binding SaslMechanismOptions}"
+                          SelectedItem="{Binding EditSaslMechanism}"
+                          FontSize="13" Height="26" Margin="0 5"/>
 
                 <TextBlock Grid.Row="5" Grid.Column="0" Text="用户名：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
                 <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditSaslUsername}" FontSize="13" Height="26" Margin="0 5"/>
@@ -86,14 +87,23 @@
 
                 <CheckBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Content="启用 SSL" 
                           IsChecked="{Binding EditUseSsl}" Margin="0 5" FontSize="13"/>
-                <CheckBox Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Content="跳过 SSL 验证" 
+                <TextBlock Grid.Row="9" Grid.Column="0" Text="CA 文件：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding EditSslCaLocation}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="客户端证书：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding EditSslCertificateLocation}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <TextBlock Grid.Row="11" Grid.Column="0" Text="客户端私钥：" FontSize="13" Margin="0 5" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="11" Grid.Column="1" Text="{Binding EditSslKeyLocation}" FontSize="13" Height="26" Margin="0 5"/>
+
+                <CheckBox Grid.Row="12" Grid.Column="0" Grid.ColumnSpan="2" Content="跳过 SSL 验证" 
                           IsChecked="{Binding EditSslSkipVerify}" Margin="0 5" FontSize="13"/>
             </Grid>
         </ScrollViewer>
 
         <!-- Bottom buttons -->
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 10 0 0">
-            <Button Command="{Binding AddConnectionCommand}" Content="添加连接" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
+            <Button Command="{Binding AddConnectionCommand}" Content="{Binding UpsertButtonText}" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
             <Button Command="{Binding SelectAndCloseCommand}" Content="选择并关闭" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
             <Button Command="{Binding SaveCommand}" Content="保存" FontSize="13" Width="70" Height="28"/>
         </StackPanel>

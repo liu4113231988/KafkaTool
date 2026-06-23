@@ -34,13 +34,7 @@
                 <DataGridTextColumn Header="时间戳" Width="150" Binding="{Binding FormattedTimestamp}"/>
                 <DataGridTextColumn Header="Key" Width="120" Binding="{Binding Key}"/>
                 <DataGridTextColumn Header="Value" Width="*" Binding="{Binding Value}"/>
-                <DataGridTextColumn Header="Headers" Width="120">
-                    <DataGridTextColumn.Binding>
-                        <MultiBinding StringFormat="{}{0}">
-                            <Binding Path="Headers.Count" />
-                        </MultiBinding>
-                    </DataGridTextColumn.Binding>
-                </DataGridTextColumn>
+                <DataGridTextColumn Header="Headers" Width="220" Binding="{Binding FormattedHeaders}"/>
             </DataGrid.Columns>
         </DataGrid>
 
