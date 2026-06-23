@@ -15,6 +15,53 @@
         <converters:BoolToLoadingTextConverter x:Key="BoolToLoadingText"/>
         <converters:BoolToConsumingTextConverter x:Key="BoolToConsumingText"/>
         <converters:StringNotEmptyToVisibleConverter x:Key="StringNotEmptyToVisible"/>
+        <SolidColorBrush x:Key="PageBackgroundBrush" Color="#FFF7F3EB"/>
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFCF7"/>
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#FFD8CCB8"/>
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Margin" Value="0 0 0 10"/>
+        </Style>
+        <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FF3D3428"/>
+        </Style>
+        <Style x:Key="FieldLabelTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#FF4B4339"/>
+        </Style>
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#FF6B6259"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="HintTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#FF7A7268"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12 0"/>
+            <Setter Property="Background" Value="#FFB25F34"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FFB25F34"/>
+            <Setter Property="Margin" Value="0 0 8 0"/>
+        </Style>
+        <Style x:Key="SecondaryActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12 0"/>
+            <Setter Property="Margin" Value="0 0 8 0"/>
+        </Style>
     </Window.Resources>
     <i:Interaction.Triggers>
         <i:EventTrigger EventName="Closing" SourceObject="{Binding ElementName=mainWindow}">
@@ -22,27 +69,40 @@
         </i:EventTrigger>
     </i:Interaction.Triggers>
 
-    <Grid>
+    <Grid Background="{StaticResource PageBackgroundBrush}">
         <Grid.RowDefinitions>
-            <!-- Connection bar -->
-            <RowDefinition Height="40"/>
-            <!-- Tab content -->
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- ========== Top Connection Bar ========== -->
-        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0 0 0 1">
-            <Grid Margin="8 4">
+        <Border Grid.Row="0" Background="#FFF2E6D8" BorderBrush="#E1D3C1" BorderThickness="0 0 0 1">
+            <Grid Margin="8 6">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="220"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Kafka地址：" FontSize="14" VerticalAlignment="Center" Margin="0 0 5 0"/>
-                <TextBox Grid.Column="1" Text="{Binding KafkaBootstrapServer}" FontSize="14" Height="26" VerticalAlignment="Center"/>
-                <Button Grid.Column="2" Command="{Binding TestConnectionCommand}" Content="测试连接" FontSize="13" Height="26" Width="80" Margin="5 0"/>
-                <Button Grid.Column="3" Command="{Binding ManageConnectionsCommand}" Content="连接管理" FontSize="13" Height="26" Width="80" Margin="5 0 0 0"/>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="连接：" Style="{StaticResource FieldLabelTextStyle}" Margin="0 0 5 0"/>
+                <ComboBox Grid.Row="0" Grid.Column="1"
+                          ItemsSource="{Binding Connections}"
+                          SelectedItem="{Binding CurrentConnection}"
+                          DisplayMemberPath="Name"
+                          FontSize="13" Height="26" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Kafka地址：" Style="{StaticResource FieldLabelTextStyle}" Margin="12 0 5 0"/>
+                <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding KafkaBootstrapServer}" FontSize="14" Height="26" VerticalAlignment="Center"/>
+                <Button Grid.Row="0" Grid.Column="4" Command="{Binding TestConnectionCommand}" Content="测试连接" Style="{StaticResource SecondaryActionButtonStyle}" Height="26" Width="80" Margin="5 0"/>
+                <Button Grid.Row="0" Grid.Column="5" Command="{Binding ManageConnectionsCommand}" Content="连接管理" Style="{StaticResource SecondaryActionButtonStyle}" Height="26" Width="88" Margin="5 0 0 0"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="6" Text="{Binding ConnectionStatus}" Style="{StaticResource HintTextStyle}" Margin="0 6 0 0"/>
             </Grid>
         </Border>
 
@@ -50,95 +110,118 @@
         <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="0">
             <!-- ==================== Tab 0: 生产/消费 ==================== -->
             <TabItem Header="生产/消费">
-                <Grid Margin="8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8">
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="消息生产" Style="{StaticResource SectionHeaderTextStyle}" Margin="0 0 0 10"/>
+                                <Grid Margin="0 0 0 6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="220"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="生产者Topic：" Style="{StaticResource FieldLabelTextStyle}"/>
+                        <TextBox Grid.Column="1" Text="{Binding ProducerTopic}" FontSize="14" Height="26" Margin="0 0 10 0"/>
+                        <TextBlock Grid.Column="2" Text="指定分区：" Style="{StaticResource FieldLabelTextStyle}"/>
+                        <TextBox Grid.Column="3" Text="{Binding ProducerPartition, TargetNullValue=''}" FontSize="14" Height="26" Margin="0 0 10 0"/>
+                        <TextBlock Grid.Column="4" Text="消息Key：" Style="{StaticResource FieldLabelTextStyle}"/>
+                        <TextBox Grid.Column="5" Text="{Binding ProducerKey}" FontSize="14" Height="26"/>
+                                </Grid>
 
-                    <!-- Producer Topic -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 5">
-                        <TextBlock Width="120" FontSize="14" VerticalAlignment="Center">生产者Topic：</TextBlock>
-                        <TextBox Text="{Binding ProducerTopic}" Width="250" FontSize="14" Height="26"/>
-                        <TextBlock Width="80" FontSize="14" VerticalAlignment="Center" Margin="20 0 0 0">指定分区：</TextBlock>
-                        <TextBox Text="{Binding ProducerPartition, TargetNullValue=''}" Width="80" FontSize="14" Height="26"/>
-                        <TextBlock Width="60" FontSize="14" VerticalAlignment="Center" Margin="20 0 0 0">消息Key：</TextBlock>
-                        <TextBox Text="{Binding ProducerKey}" Width="200" FontSize="14" Height="26"/>
-                    </StackPanel>
-
-                    <!-- Producer Message -->
-                    <DockPanel Grid.Row="1" Margin="0 5" Height="100">
-                        <DockPanel DockPanel.Dock="Top">
-                            <TextBlock FontSize="14" VerticalAlignment="Center">消息内容：</TextBlock>
-                            <TextBlock FontSize="14" VerticalAlignment="Center" Margin="10 0 0 0">Headers：</TextBlock>
-                            <TextBox Text="{Binding ProducerHeaders}" FontSize="12" Height="22" VerticalAlignment="Center" 
+                                <Grid Margin="0 0 0 8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="260"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0" Margin="0 0 10 0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="120"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="消息内容" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBlock Text="{Binding ProducerPayloadTypeText, StringFormat='  类型: {0}'}" Style="{StaticResource HintTextStyle}" VerticalAlignment="Center" Margin="8 0 0 0"/>
+                            </StackPanel>
+                            <TextBox Grid.Row="1" Text="{Binding ProducerMessage}" FontSize="14" AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"/>
+                        </Grid>
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="120"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Headers（每行 `key=value`）" Style="{StaticResource FieldLabelTextStyle}" Margin="0 0 0 4"/>
+                            <TextBox Grid.Row="1" Text="{Binding ProducerHeaders}" FontSize="12" AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
                                      ToolTip="每行一个，格式: key=value"/>
-                        </DockPanel>
-                        <TextBox Text="{Binding ProducerMessage}" FontSize="14" AcceptsReturn="True" TextWrapping="Wrap" Margin="0 2 0 0"/>
-                    </DockPanel>
+                        </Grid>
+                                </Grid>
 
-                    <!-- Producer Buttons -->
-                    <Grid Grid.Row="2" Margin="0 5">
+                                <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding ProducerStatus}" FontSize="12" VerticalAlignment="Center" 
-                                   Foreground="Gray" TextWrapping="NoWrap" TextTrimming="None"
-                                   Margin="0 0 10 0"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button Command="{Binding AcquireTopicListCommand}" Margin="0 0 10 0" FontSize="13" Height="28">获取TopicList</Button>
-                            <Button Command="{Binding SendMessageCommand}" FontSize="13" Height="28" Width="90">发送消息</Button>
-                        </StackPanel>
-                    </Grid>
+                        <TextBlock Grid.Column="0" Text="{Binding ProducerStatus}" Style="{StaticResource StatusTextStyle}" Margin="0 0 10 0"/>
+                        <WrapPanel Grid.Column="1" Margin="0">
+                            <Button Command="{Binding AcquireTopicListCommand}" Style="{StaticResource SecondaryActionButtonStyle}" Content="获取TopicList"/>
+                            <Button Command="{Binding ValidateProducerPayloadCommand}" Style="{StaticResource SecondaryActionButtonStyle}" Content="校验消息"/>
+                            <Button Command="{Binding FormatProducerJsonCommand}" Style="{StaticResource SecondaryActionButtonStyle}" Content="格式化JSON"/>
+                            <Button Command="{Binding SendMessageCommand}" Style="{StaticResource PrimaryActionButtonStyle}" Width="96" Content="发送消息"/>
+                        </WrapPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
 
-                    <Separator Grid.Row="3" Margin="0 5" VerticalAlignment="Top"/>
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="实时消费" Style="{StaticResource SectionHeaderTextStyle}" Margin="0 0 0 10"/>
+                                <Grid Margin="0 0 0 6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="250"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="消费者Topic：" Style="{StaticResource FieldLabelTextStyle}"/>
+                        <TextBox Grid.Column="1" Text="{Binding ConsumerTopic}" IsReadOnly="{Binding IsConsumerReadonly}" FontSize="14" Height="26" Margin="0 0 10 0"/>
+                        <TextBlock Grid.Column="2" Text="Group：" Style="{StaticResource FieldLabelTextStyle}"/>
+                        <TextBox Grid.Column="3" Text="{Binding ConsumerGroup}" IsReadOnly="{Binding IsConsumerReadonly}" FontSize="14" Height="26"/>
+                                </Grid>
 
-                    <!-- Consumer -->
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0 5">
-                        <TextBlock Width="120" FontSize="14" VerticalAlignment="Center">消费者Topic：</TextBlock>
-                        <TextBox Text="{Binding ConsumerTopic}" IsReadOnly="{Binding IsConsumerReadonly}" FontSize="14" Height="26" Width="250"/>
-                        <TextBlock Width="80" FontSize="14" VerticalAlignment="Center" Margin="20 0 0 0">Group：</TextBlock>
-                        <TextBox Text="{Binding ConsumerGroup}" IsReadOnly="{Binding IsConsumerReadonly}" FontSize="14" Height="26" Width="250"/>
-                    </StackPanel>
-
-                    <!-- Consumer Message -->
-                    <TextBox Grid.Row="5" x:Name="txtConsumerMessage" Text="{Binding ConsumerMessage}" 
+                                <TextBox x:Name="txtConsumerMessage" Text="{Binding ConsumerMessage}" 
                              VerticalScrollBarVisibility="Auto" FontSize="13" IsReadOnly="True"
-                             AcceptsReturn="True" TextWrapping="Wrap" Margin="0 5"/>
+                             AcceptsReturn="True" TextWrapping="Wrap" Margin="0 0 0 8" MinHeight="260"/>
 
-                    <!-- Consumer Controls -->
-                    <Grid Grid.Row="6" Margin="0 5">
+                                <Grid Margin="0 0 0 6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding ConsumerTooltipMsg}" Foreground="Red" FontSize="13" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="0" Text="{Binding ConsumerTooltipMsg}" Foreground="#CC3333" FontSize="13" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <TextBlock Text="状态: " FontSize="12" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding IsConsuming, Converter={StaticResource BoolToConsumingText}}" FontSize="12" VerticalAlignment="Center" Margin="0 0 10 0"/>
-                            <Button Command="{Binding SubscribeMessageCommand}" CommandParameter="{Binding ElementName=txtConsumerMessage}" 
-                                    FontSize="13" Height="28" Margin="0 0 10 0" Content="订阅消息"/>
-                            <Button Command="{Binding CancelSubscribeCommand}" FontSize="13" Height="28" Content="取消订阅"/>
+                            <TextBlock Text="状态: " Style="{StaticResource StatusTextStyle}"/>
+                            <TextBlock Text="{Binding IsConsuming, Converter={StaticResource BoolToConsumingText}}" Style="{StaticResource StatusTextStyle}" Margin="0 0 10 0"/>
+                            <Button Command="{Binding SubscribeMessageCommand}" CommandParameter="{Binding ElementName=txtConsumerMessage}" Style="{StaticResource PrimaryActionButtonStyle}" Content="订阅消息"/>
+                            <Button Command="{Binding CancelSubscribeCommand}" Style="{StaticResource SecondaryActionButtonStyle}" Content="取消订阅"/>
                         </StackPanel>
-                    </Grid>
+                                </Grid>
 
-                    <TextBlock Grid.Row="7" Text="{Binding ConnectionStatus}" FontSize="11" Foreground="Gray"/>
+                                <TextBlock Text="实时消费结果会保留最近一段内容，避免长时间订阅导致界面卡顿。" Style="{StaticResource HintTextStyle}" Margin="0 0 0 6"/>
 
-                    <!-- Consumer Error -->
-                    <Border Grid.Row="8" Background="#FFF0F0" BorderBrush="#FFCCCC" BorderThickness="1"
+                                <Border Background="#FFF0F0" BorderBrush="#FFCCCC" BorderThickness="1"
                             Visibility="{Binding ConsumerErrorMessage, Converter={StaticResource StringNotEmptyToVisible}}">
                         <TextBlock Text="{Binding ConsumerErrorMessage}" FontSize="12" Foreground="#CC0000"
                                    Margin="5 3" TextWrapping="Wrap"/>
-                    </Border>
-                </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- ==================== Tab 1: Topic 管理 ==================== -->
@@ -150,7 +233,8 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Left: Topic list -->
-                    <Grid Grid.Column="0" Margin="0 0 8 0">
+                    <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}" Margin="0 0 8 0">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -160,38 +244,40 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Orientation="Horizontal">
-                            <TextBlock Text="Topic 列表" FontSize="16" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding IsTopicLoading, Converter={StaticResource BoolToLoadingText}}" FontSize="12" Foreground="Gray" VerticalAlignment="Center" Margin="8 0 0 0"/>
+                            <TextBlock Text="Topic 列表" Style="{StaticResource SectionHeaderTextStyle}"/>
+                            <TextBlock Text="{Binding IsTopicLoading, Converter={StaticResource BoolToLoadingText}}" Style="{StaticResource StatusTextStyle}" Margin="8 0 0 0"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0 5">
                             <TextBox Text="{Binding TopicFilter}" FontSize="13" Height="24" Width="200" ToolTip="搜索过滤"/>
-                            <Button Command="{Binding RefreshTopicListCommand}" FontSize="12" Height="24" Width="70" Margin="5 0 0 0" Content="刷新"/>
+                            <Button Command="{Binding RefreshTopicListCommand}" Style="{StaticResource SecondaryActionButtonStyle}" Height="24" Width="70" Margin="5 0 0 0" Content="刷新"/>
                         </StackPanel>
 
                         <ListBox Grid.Row="2" ItemsSource="{Binding FilteredTopicList}" SelectedItem="{Binding SelectedTopic}" 
                                  DisplayMemberPath="TopicName" Height="200" Margin="0 5"/>
 
                         <!-- Topic actions -->
-                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0 5">
-                            <Button Command="{Binding CreateTopicCommand}" Content="创建Topic" FontSize="13" Height="28" Width="90" Margin="0 0 5 0"/>
-                            <Button Command="{Binding DeleteTopicCommand}" Content="删除Topic" FontSize="13" Height="28" Width="90" Margin="0 0 5 0"/>
-                            <Button Command="{Binding ViewTopicDetailCommand}" Content="查看详情" FontSize="13" Height="28" Width="90"/>
-                        </StackPanel>
+                        <WrapPanel Grid.Row="3" Margin="0 5">
+                            <Button Command="{Binding CreateTopicCommand}" Content="创建Topic" Style="{StaticResource PrimaryActionButtonStyle}" Width="96"/>
+                            <Button Command="{Binding DeleteTopicCommand}" Content="删除Topic" Style="{StaticResource SecondaryActionButtonStyle}" Width="96"/>
+                            <Button Command="{Binding ViewTopicDetailCommand}" Content="查看详情" Style="{StaticResource SecondaryActionButtonStyle}" Width="96"/>
+                        </WrapPanel>
 
-                        <TextBlock Grid.Row="4" Text="{Binding TopicStatus}" FontSize="12" Foreground="Gray"/>
+                        <TextBlock Grid.Row="4" Text="{Binding TopicStatus}" Style="{StaticResource StatusTextStyle}"/>
                     </Grid>
+                    </Border>
 
                     <!-- Right: Topic detail -->
-                    <Grid Grid.Column="1" Margin="8 0 0 0">
+                    <Border Grid.Column="1" Style="{StaticResource SectionCardStyle}" Margin="8 0 0 0">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="Topic 详情" FontSize="16" FontWeight="Bold"/>
+                        <TextBlock Grid.Row="0" Text="Topic 详情" Style="{StaticResource SectionHeaderTextStyle}"/>
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="0 8 0 0">
-                                <TextBlock Text="在 Topic 列表中选择后点击“查看详情”" FontSize="13" Foreground="Gray"
+                                <TextBlock Text="在 Topic 列表中选择后点击“查看详情”" Style="{StaticResource StatusTextStyle}"
                                            Visibility="{Binding TopicDetail, TargetNullValue=Visible}"/>
 
                                 <Border BorderBrush="#EEE" BorderThickness="1" Padding="12" Background="#FAFAFA">
@@ -205,6 +291,9 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
 
                                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Topic：" FontWeight="Bold" FontSize="13"/>
@@ -215,6 +304,15 @@
 
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="副本因子：" FontWeight="Bold" FontSize="13" Margin="0 6 0 0"/>
                                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TopicDetail.ReplicationFactor}" FontSize="13" Margin="0 6 0 0"/>
+
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="健康状态：" FontWeight="Bold" FontSize="13" Margin="0 6 0 0"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TopicDetail.HealthSummary}" FontSize="13" Margin="0 6 0 0"/>
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="消息总量：" FontWeight="Bold" FontSize="13" Margin="0 6 0 0"/>
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TopicDetail.TotalMessageCount}" FontSize="13" Margin="0 6 0 0"/>
+
+                                            <TextBlock Grid.Row="5" Grid.Column="0" Text="异常分区：" FontWeight="Bold" FontSize="13" Margin="0 6 0 0"/>
+                                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TopicDetail.PartitionRiskSummary}" FontSize="13" Margin="0 6 0 0"/>
                                         </Grid>
 
                                         <TextBlock Text="分区详情" FontSize="14" FontWeight="Bold" Margin="0 0 0 6"/>
@@ -222,6 +320,7 @@
                                                   IsReadOnly="True" RowHeight="26" MinHeight="160">
                                             <DataGrid.Columns>
                                                 <DataGridTextColumn Header="分区" Width="60" Binding="{Binding PartitionId}"/>
+                                                <DataGridTextColumn Header="状态" Width="90" Binding="{Binding StatusText}"/>
                                                 <DataGridTextColumn Header="Leader" Width="70" Binding="{Binding Leader}"/>
                                                 <DataGridTextColumn Header="副本" Width="110" Binding="{Binding ReplicasText}"/>
                                                 <DataGridTextColumn Header="ISR" Width="110" Binding="{Binding InSyncReplicasText}"/>
@@ -232,25 +331,20 @@
                                         </DataGrid>
 
                                         <TextBlock Text="配置" FontSize="14" FontWeight="Bold" Margin="0 12 0 6"/>
-                                        <ItemsControl ItemsSource="{Binding TopicDetail.Configs}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid Margin="0 2">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="220"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{Binding Key}" FontFamily="Consolas" FontSize="12"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <TextBox Text="{Binding TopicConfigEntries}" AcceptsReturn="True" TextWrapping="Wrap"
+                                                 VerticalScrollBarVisibility="Auto" MinHeight="120" FontFamily="Consolas" FontSize="12"/>
+                                        <WrapPanel Margin="0 8 0 0">
+                                            <Button Command="{Binding SaveTopicConfigsCommand}" Content="保存配置" Style="{StaticResource PrimaryActionButtonStyle}" Width="90"/>
+                                            <TextBlock Text="目标分区数：" VerticalAlignment="Center" FontSize="13"/>
+                                            <TextBox Text="{Binding TopicTargetPartitionCount}" Width="80" Height="26" Margin="8 0"/>
+                                            <Button Command="{Binding ExpandTopicPartitionsCommand}" Content="扩容分区" Style="{StaticResource SecondaryActionButtonStyle}" Width="90"/>
+                                        </WrapPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
 
@@ -263,18 +357,20 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Left: Consumer group list -->
-                    <Grid Grid.Column="0" Margin="0 0 8 0">
+                    <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}" Margin="0 0 8 0">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Orientation="Horizontal">
-                            <TextBlock Text="消费者组列表" FontSize="16" FontWeight="Bold"/>
-                            <Button Command="{Binding RefreshConsumerGroupsCommand}" FontSize="12" Height="24" Width="70" Margin="10 0" Content="刷新"/>
+                            <TextBlock Text="消费者组列表" Style="{StaticResource SectionHeaderTextStyle}"/>
+                            <Button Command="{Binding RefreshConsumerGroupsCommand}" Style="{StaticResource SecondaryActionButtonStyle}" Height="24" Width="70" Margin="10 0" Content="刷新"/>
                         </StackPanel>
 
                         <DataGrid Grid.Row="1" ItemsSource="{Binding ConsumerGroups}" AutoGenerateColumns="False"
@@ -287,32 +383,54 @@
                         </DataGrid>
 
                         <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0 5">
-                            <Button Command="{Binding ViewConsumerGroupDetailCommand}" Content="查看详情(Lag)" FontSize="13" Height="28" Margin="0 0 0 5"/>
-                            <Button Command="{Binding DeleteConsumerGroupCommand}" Content="删除消费者组" FontSize="13" Height="28" Margin="0 0 0 5"/>
-                            <Button Command="{Binding ResetConsumerGroupOffsetCommand}" Content="重置偏移量(OFFSET=0)" FontSize="13" Height="28"/>
+                            <Button Command="{Binding ViewConsumerGroupDetailCommand}" Content="查看详情(Lag)" Style="{StaticResource SecondaryActionButtonStyle}" Margin="0 0 0 5"/>
+                            <Button Command="{Binding DeleteConsumerGroupCommand}" Content="删除消费者组" Style="{StaticResource SecondaryActionButtonStyle}" Margin="0 0 0 5"/>
+                            <Button Command="{Binding ResetConsumerGroupOffsetCommand}" Content="预览并重置偏移量" Style="{StaticResource PrimaryActionButtonStyle}"/>
                         </StackPanel>
 
-                        <TextBlock Grid.Row="3" Text="{Binding ConsumerGroupStatus}" FontSize="12" Foreground="Gray"/>
-                        <TextBlock Grid.Row="4" Text="{Binding TotalLag, StringFormat='总 Lag: {0}'}" FontSize="14" FontWeight="Bold" 
+                        <GroupBox Grid.Row="3" Header="重置策略" Margin="0 5">
+                            <StackPanel Margin="5">
+                                <ComboBox ItemsSource="{Binding ResetOffsetStrategyOptions}" SelectedValuePath="Key" DisplayMemberPath="Value"
+                                          SelectedValue="{Binding ResetOffsetStrategy}" Height="26" FontSize="12"/>
+                                <TextBox Text="{Binding ResetOffsetValue, TargetNullValue=''}" Height="26" FontSize="12" Margin="0 5 0 0"
+                                         ToolTip="当策略为 specific 时生效，输入要提交的目标 offset"/>
+                                <WrapPanel Margin="0 5 0 0">
+                                    <DatePicker SelectedDate="{Binding ResetOffsetTimestamp}" Height="26" FontSize="12"/>
+                                    <TextBox Text="{Binding ResetOffsetTimeText}" Width="90" Height="26" FontSize="12" Margin="8 0 0 0" ToolTip="请输入 HH:mm 或 HH:mm:ss"/>
+                                </WrapPanel>
+                                <TextBlock Text="{Binding ResetOffsetTimestamp, StringFormat='日期: {0:yyyy-MM-dd}'}" Style="{StaticResource HintTextStyle}" Margin="0 4 0 0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <TextBlock Grid.Row="4" Text="{Binding ConsumerGroupStatus}" Style="{StaticResource StatusTextStyle}"/>
+                        <TextBlock Grid.Row="5" Text="{Binding TotalLag, StringFormat='总 Lag: {0}'}" FontSize="14" FontWeight="Bold" 
                                    Foreground="{Binding TotalLag, Converter={StaticResource LongToLagColor}}" Margin="0 5"/>
                     </Grid>
+                    </Border>
 
                     <!-- Right: Consumer group detail (lag per partition) -->
-                    <Grid Grid.Column="1" Margin="8 0 0 0">
+                    <Border Grid.Column="1" Style="{StaticResource SectionCardStyle}" Margin="8 0 0 0">
+                    <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="分区 Lag 详情" FontSize="14" FontWeight="Bold" Margin="0 0 0 5"/>
+                        <TextBlock Grid.Row="0" Text="分区 Lag 详情" Style="{StaticResource SectionHeaderTextStyle}" Margin="0 0 0 5"/>
+                        <TextBlock Grid.Row="1" Text="活跃成员分配" FontSize="14" FontWeight="Bold" Margin="0 10 0 5"/>
 
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding ConsumerGroupDetails}" AutoGenerateColumns="False"
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding ConsumerGroupDetails}" AutoGenerateColumns="False"
                                   IsReadOnly="True" RowHeight="26">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Topic" Width="*" Binding="{Binding Topic}"/>
                                 <DataGridTextColumn Header="分区" Width="60" Binding="{Binding Partition}"/>
                                 <DataGridTextColumn Header="当前偏移" Width="90" Binding="{Binding CurrentOffset}"/>
                                 <DataGridTextColumn Header="LOG-END" Width="90" Binding="{Binding LogEndOffset}"/>
+                                <DataGridTextColumn Header="ClientId" Width="130" Binding="{Binding ClientId}"/>
+                                <DataGridTextColumn Header="Host" Width="150" Binding="{Binding Host}"/>
                                 <DataGridTextColumn Header="Lag" Width="80" Binding="{Binding Lag}">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style>
@@ -324,7 +442,19 @@
                                 </DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
+
+                        <TextBlock Grid.Row="3" Text="成员与分区分配" FontSize="14" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <DataGrid Grid.Row="4" ItemsSource="{Binding SelectedConsumerGroup.Members}" AutoGenerateColumns="False"
+                                  IsReadOnly="True" RowHeight="26">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="MemberId" Width="180" Binding="{Binding MemberId}"/>
+                                <DataGridTextColumn Header="ClientId" Width="120" Binding="{Binding ClientId}"/>
+                                <DataGridTextColumn Header="Host" Width="140" Binding="{Binding Host}"/>
+                                <DataGridTextColumn Header="分配分区" Width="*" Binding="{Binding AssignedPartitionsText}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
 
@@ -339,39 +469,54 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 5">
+                    <Border Grid.Row="0" Grid.RowSpan="5" Style="{StaticResource SectionCardStyle}">
+                    <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="消息浏览" Style="{StaticResource SectionHeaderTextStyle}" Margin="0 0 0 10"/>
+                    <WrapPanel Grid.Row="1" Margin="0 5">
                         <TextBlock Text="Topic：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowseTopic}" Width="250" FontSize="14" Height="26" Margin="5 0"/>
-                        <TextBlock Text="分区（可选）：" FontSize="14" VerticalAlignment="Center" Margin="20 0 0 0"/>
-                        <TextBox Text="{Binding BrowsePartition, TargetNullValue=''}" Width="80" FontSize="14" Height="26" Margin="5 0"/>
-                        <TextBlock Text="起始偏移（可选）：" FontSize="14" VerticalAlignment="Center" Margin="20 0 0 0"/>
-                        <TextBox Text="{Binding BrowseOffset, TargetNullValue=''}" Width="100" FontSize="14" Height="26" Margin="5 0"/>
-                    </StackPanel>
+                        <TextBox Text="{Binding BrowseTopic}" Width="220" FontSize="14" Height="26" Margin="5 0 12 0"/>
+                        <TextBlock Text="分区（可选）：" FontSize="14" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding BrowsePartition, TargetNullValue=''}" Width="80" FontSize="14" Height="26" Margin="5 0 12 0"/>
+                        <TextBlock Text="起始偏移（可选）：" FontSize="14" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding BrowseOffset, TargetNullValue=''}" Width="100" FontSize="14" Height="26" Margin="5 0 12 0"/>
+                        <TextBlock Text="浏览Group（可选）：" FontSize="14" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding BrowseGroupId}" Width="180" FontSize="14" Height="26" Margin="5 0"/>
+                    </WrapPanel>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0 5">
+                    <WrapPanel Grid.Row="2" Margin="0 5">
                         <TextBlock Text="条数：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowseCount}" Width="80" FontSize="14" Height="26" Margin="5 0"/>
+                        <TextBox Text="{Binding BrowseCount}" Width="80" FontSize="14" Height="26" Margin="5 0 12 0"/>
                         <CheckBox IsChecked="{Binding BrowseByTimestamp}" Content="按时间浏览" FontSize="13" Margin="20 0 0 0" VerticalAlignment="Center"/>
                         <DatePicker SelectedDate="{Binding BrowseTimestamp}" FontSize="13" Height="26" Margin="10 0 0 0"/>
-                        <TextBlock Text="{Binding BrowseTimestamp, StringFormat=' HH:mm:ss'}" FontSize="13" VerticalAlignment="Center"/>
-                    </StackPanel>
+                        <TextBox Text="{Binding BrowseTimeText}" Width="90" FontSize="13" Height="26" Margin="8 0 0 0" ToolTip="请输入 HH:mm 或 HH:mm:ss"/>
+                    </WrapPanel>
 
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0 10">
-                        <Button Command="{Binding BrowseMessagesCommand}" Content="浏览消息" FontSize="14" Height="30" Width="100"/>
-                        <TextBlock FontSize="12" Foreground="Gray" VerticalAlignment="Center" Margin="10 0 0 0">
+                    <WrapPanel Grid.Row="3" Margin="0 10">
+                        <Button Command="{Binding BrowseMessagesCommand}" Content="浏览消息" Style="{StaticResource PrimaryActionButtonStyle}" Width="100"/>
+                        <Button Command="{Binding ContinueBrowseMessagesCommand}" Content="继续读取下一页" Style="{StaticResource SecondaryActionButtonStyle}" Width="130" Margin="10 0 0 0"/>
+                        <TextBlock Style="{StaticResource StatusTextStyle}" Margin="10 0 0 0">
                             将打开新窗口显示消息列表（分区、偏移量、时间戳、Key、Value、Headers）
                         </TextBlock>
-                    </StackPanel>
+                    </WrapPanel>
 
-                    <Separator Grid.Row="3" Margin="0 10"/>
+                    <Separator Grid.Row="4" Margin="0 10"/>
 
-                    <StackPanel Grid.Row="4" Margin="0 10">
+                    <StackPanel Grid.Row="5" Margin="0 10">
                         <TextBlock Text="使用说明" FontSize="14" FontWeight="Bold"/>
                         <TextBlock Text="• 按偏移浏览：指定 Topic + 分区 + 偏移量，从指定位置读取N条消息" FontSize="12" Margin="0 5"/>
-                        <TextBlock Text="• 按时间浏览：指定 Topic + 时间，从该时间点开始读取N条消息" FontSize="12" Margin="0 2"/>
-                        <TextBlock Text="• 不指定分区则轮询所有分区" FontSize="12" Margin="0 2"/>
+                        <TextBlock Text="• 按时间浏览：指定 Topic + 日期 + 时间，从该时间点开始读取N条消息" FontSize="12" Margin="0 2"/>
+                        <TextBlock Text="• 不指定分区则轮询所有分区；浏览 Group 可用于隔离临时会话位点" FontSize="12" Margin="0 2"/>
                         <TextBlock Text="• 消息详情包含：分区、偏移量、时间戳、Key、Value、Headers" FontSize="12" Margin="0 2"/>
                     </StackPanel>
+                    </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
 
@@ -385,12 +530,21 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
+                    <Border Grid.Row="0" Grid.RowSpan="4" Style="{StaticResource SectionCardStyle}">
+                    <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 5">
-                        <TextBlock Text="集群信息" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <Button Command="{Binding RefreshClusterInfoCommand}" Content="刷新" FontSize="12" Height="24" Width="70" Margin="10 0"/>
+                        <TextBlock Text="集群信息" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center"/>
+                        <Button Command="{Binding RefreshClusterInfoCommand}" Content="刷新" Style="{StaticResource SecondaryActionButtonStyle}" Height="24" Width="70" Margin="10 0"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="1" Text="{Binding ClusterStatus}" FontSize="13" Foreground="Gray" Margin="0 5"/>
+                    <TextBlock Grid.Row="1" Text="{Binding ClusterStatus}" Style="{StaticResource StatusTextStyle}" Margin="0 5"/>
 
                     <!-- Cluster details -->
                     <Border Grid.Row="2" BorderBrush="#EEE" BorderThickness="1" Margin="0 10" Padding="15" Background="#FAFAFA">
@@ -435,6 +589,8 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </GroupBox>
+                    </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>

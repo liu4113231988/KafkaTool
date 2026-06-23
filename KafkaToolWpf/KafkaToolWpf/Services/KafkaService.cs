@@ -218,6 +218,65 @@ namespace KafkaToolWpf.Services
             return true;
         }
 
+        public async Task<bool> UpdateTopicConfigsAsync(string bootstrapServers, string topicName,
+            Dictionary<string, string> configs, Action<AdminClientConfig> configAction = null)
+        {
+            var config = BuildAdminConfig(bootstrapServers, configAction);
+            using var adminClient = new AdminClientBuilder(config).Build();
+
+            var topicConfigs = configs?
+                .Where(kv => !string.IsNullOrWhiteSpace(kv.Key))
+                .Select(kv => new ConfigEntry
+                {
+                    Name = kv.Key.Trim(),
+                    Value = kv.Value?.Trim() ?? string.Empty,
+                    IncrementalOperation = AlterConfigOpType.Set
+                })
+                .ToList() ?? new List<ConfigEntry>();
+
+            var resource = new ConfigResource
+            {
+                Type = ResourceType.Topic,
+                Name = topicName
+            };
+
+            await adminClient.IncrementalAlterConfigsAsync(
+                new Dictionary<ConfigResource, List<ConfigEntry>>
+                {
+                    [resource] = topicConfigs
+                },
+                new IncrementalAlterConfigsOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(10)
+                });
+
+            return true;
+        }
+
+        public async Task<bool> IncreaseTopicPartitionsAsync(string bootstrapServers, string topicName, int partitionCount,
+            Action<AdminClientConfig> configAction = null)
+        {
+            var config = BuildAdminConfig(bootstrapServers, configAction);
+            using var adminClient = new AdminClientBuilder(config).Build();
+
+            await adminClient.CreatePartitionsAsync(
+                new[]
+                {
+                    new PartitionsSpecification
+                    {
+                        Topic = topicName,
+                        IncreaseTo = partitionCount
+                    }
+                },
+                new CreatePartitionsOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(10),
+                    OperationTimeout = TimeSpan.FromSeconds(10)
+                });
+
+            return true;
+        }
+
         public async Task<bool> DeleteTopicAsync(string bootstrapServers, string topicName, Action<AdminClientConfig> configAction = null)
         {
             var config = BuildAdminConfig(bootstrapServers, configAction);
@@ -589,6 +648,54 @@ namespace KafkaToolWpf.Services
             return Task.FromResult(true);
         }
 
+        public Task<bool> ResetConsumerGroupOffsetsAsync(string bootstrapServers, string groupId, List<ConsumerGroupDetail> details,
+            string strategy, long? offset, DateTime? timestamp, Action<AdminClientConfig> configAction = null)
+        {
+            if (details == null || details.Count == 0)
+            {
+                return Task.FromResult(false);
+            }
+
+            var adminConfig = BuildAdminConfig(bootstrapServers, configAction);
+            var consumerConfig = BuildConsumerConfigFromAdmin(adminConfig, groupId, cfg =>
+            {
+                cfg.EnableAutoCommit = false;
+                cfg.AutoOffsetReset = AutoOffsetReset.Earliest;
+            });
+
+            using var consumer = new ConsumerBuilder<Ignore, Ignore>(consumerConfig).Build();
+            var offsetsToCommit = new List<TopicPartitionOffset>(details.Count);
+
+            foreach (var detail in details)
+            {
+                var tp = new TopicPartition(detail.Topic, detail.Partition);
+                long targetOffset;
+                switch (strategy)
+                {
+                    case "earliest":
+                        targetOffset = consumer.QueryWatermarkOffsets(tp, TimeSpan.FromSeconds(10)).Low;
+                        break;
+                    case "latest":
+                        targetOffset = consumer.QueryWatermarkOffsets(tp, TimeSpan.FromSeconds(10)).High;
+                        break;
+                    case "specific":
+                        targetOffset = offset ?? 0L;
+                        break;
+                    case "timestamp":
+                        targetOffset = ResolveOffsetByTimestamp(consumer, tp, timestamp);
+                        break;
+                    default:
+                        throw new Exception($"Unsupported reset strategy: {strategy}");
+                }
+
+                offsetsToCommit.Add(new TopicPartitionOffset(tp, new Offset(targetOffset)));
+            }
+
+            consumer.Commit(offsetsToCommit);
+            consumer.Close();
+            return Task.FromResult(true);
+        }
+
         private static MessageRecord ToMessageRecord(ConsumeResult<string, string> result)
         {
             return new MessageRecord
@@ -613,6 +720,25 @@ namespace KafkaToolWpf.Services
             return topicPartitions?
                 .Select(tp => $"{tp.Topic}[{tp.Partition}]")
                 .ToList() ?? new List<string>();
+        }
+
+        private static long ResolveOffsetByTimestamp(IConsumer<Ignore, Ignore> consumer, TopicPartition topicPartition, DateTime? timestamp)
+        {
+            if (timestamp == null)
+            {
+                throw new Exception("Timestamp reset strategy requires a timestamp value.");
+            }
+
+            var result = consumer.OffsetsForTimes(
+                new[] { new TopicPartitionTimestamp(topicPartition, new Timestamp(timestamp.Value)) },
+                TimeSpan.FromSeconds(10));
+
+            if (result.Count == 0 || result[0].Offset == Offset.Unset)
+            {
+                return consumer.QueryWatermarkOffsets(topicPartition, TimeSpan.FromSeconds(10)).High;
+            }
+
+            return result[0].Offset.Value;
         }
     }
 }

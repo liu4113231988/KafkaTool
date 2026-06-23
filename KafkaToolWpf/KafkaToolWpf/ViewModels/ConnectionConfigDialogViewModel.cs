@@ -1,10 +1,14 @@
 using KafkaToolWpf.Models;
+using Microsoft.Win32;
 using Prism.Commands;
 using Prism.Dialogs;
 using Prism.Mvvm;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Windows;
 
 namespace KafkaToolWpf.ViewModels
 {
@@ -126,6 +130,8 @@ namespace KafkaToolWpf.ViewModels
         public DelegateCommand DeleteConnectionCommand { get; }
         public DelegateCommand SaveCommand { get; }
         public DelegateCommand SelectAndCloseCommand { get; }
+        public DelegateCommand ImportCommand { get; }
+        public DelegateCommand ExportCommand { get; }
 
         public IReadOnlyList<string> SaslMechanismOptions { get; } = new[]
         {
@@ -143,6 +149,8 @@ namespace KafkaToolWpf.ViewModels
             DeleteConnectionCommand = new DelegateCommand(DeleteConnection);
             SaveCommand = new DelegateCommand(Save);
             SelectAndCloseCommand = new DelegateCommand(SelectAndClose);
+            ImportCommand = new DelegateCommand(ImportConnections);
+            ExportCommand = new DelegateCommand(ExportConnections);
         }
 
         private void AddConnection()
@@ -264,6 +272,49 @@ namespace KafkaToolWpf.ViewModels
         private void RaiseActionText()
         {
             RaisePropertyChanged(nameof(UpsertButtonText));
+        }
+
+        private void ImportConnections()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                Title = "导入连接配置"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var json = File.ReadAllText(dialog.FileName);
+            var imported = JsonSerializer.Deserialize<List<ConnectionConfig>>(json) ?? new List<ConnectionConfig>();
+
+            Connections = new ObservableCollection<ConnectionConfig>(imported.Select(CloneConnection));
+            SelectedConnection = Connections.FirstOrDefault();
+        }
+
+        private void ExportConnections()
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                FileName = "kafka-connections.json",
+                Title = "导出连接配置"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(Connections, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            File.WriteAllText(dialog.FileName, json);
+            MessageBox.Show("连接配置已导出。", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         public DialogCloseListener RequestClose { get; set; } = new DialogCloseListener();

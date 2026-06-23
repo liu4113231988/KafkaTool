@@ -11,6 +11,16 @@ namespace KafkaToolWpf.Models
         public short ReplicationFactor { get; set; }
         public List<PartitionInfo> Partitions { get; set; } = new();
         public Dictionary<string, string> Configs { get; set; } = new();
+        public int UnderReplicatedPartitionCount => Partitions.Count(p => p.IsUnderReplicated);
+        public int OfflinePartitionCount => Partitions.Count(p => !p.HasLeader);
+        public long TotalMessageCount => Partitions.Sum(p => p.MessageCount);
+        public string PartitionRiskSummary => $"副本未同步 {UnderReplicatedPartitionCount} 个；无 Leader {OfflinePartitionCount} 个";
+        public string HealthSummary =>
+            OfflinePartitionCount > 0
+                ? $"异常: {OfflinePartitionCount} 个分区无 Leader"
+                : UnderReplicatedPartitionCount > 0
+                    ? $"注意: {UnderReplicatedPartitionCount} 个分区副本未同步"
+                    : "健康";
     }
 
     public class PartitionInfo
@@ -24,6 +34,12 @@ namespace KafkaToolWpf.Models
         public long MessageCount => (LatestOffset ?? 0) - (EarliestOffset ?? 0);
         public string ReplicasText => string.Join(", ", Replicas);
         public string InSyncReplicasText => string.Join(", ", InSyncReplicas);
+        public bool HasLeader => Leader >= 0;
+        public bool IsUnderReplicated => Replicas.Count != InSyncReplicas.Count;
+        public string StatusText =>
+            !HasLeader ? "Leader 异常" :
+            IsUnderReplicated ? "副本未同步" :
+            "正常";
     }
 
     public class BrokerInfo
@@ -58,6 +74,7 @@ namespace KafkaToolWpf.Models
         public string ClientId { get; set; }
         public string Host { get; set; }
         public List<string> AssignedPartitions { get; set; } = new();
+        public string AssignedPartitionsText => string.Join(", ", AssignedPartitions);
     }
 
     public class ConsumerGroupDetail
@@ -70,6 +87,8 @@ namespace KafkaToolWpf.Models
         public long Lag => LogEndOffset - CurrentOffset;
         public string ClientId { get; set; }
         public string Host { get; set; }
+        public string TopicPartitionText => $"{Topic}[{Partition}]";
+        public string OwnerText => string.IsNullOrWhiteSpace(ClientId) ? Host : $"{ClientId} @ {Host}";
     }
 
     public class MessageRecord
