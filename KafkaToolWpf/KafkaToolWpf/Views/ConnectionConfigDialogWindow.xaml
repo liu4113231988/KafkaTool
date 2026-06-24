@@ -6,12 +6,14 @@
              xmlns:prism="http://prismlibrary.com/"
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
-             Width="600" Height="550">
+             Width="740" Height="560">
     <prism:Dialog.WindowStyle>
         <Style TargetType="Window">
             <Setter Property="prism:Dialog.WindowStartupLocation" Value="CenterScreen" />
             <Setter Property="ShowInTaskbar" Value="False"/>
             <Setter Property="Title" Value="连接管理"/>
+            <Setter Property="Width" Value="740"/>
+            <Setter Property="MinWidth" Value="740"/>
         </Style>
     </prism:Dialog.WindowStyle>
     <Grid Margin="10">

@@ -8,7 +8,7 @@
         prism:ViewModelLocator.AutoWireViewModel="True"
         x:Name="mainWindow"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-        Title="KafkaTool - Kafka 管理工具" Height="800" Width="1000" MinHeight="600" MinWidth="900">
+        Title="KafkaTool - Kafka 管理工具" Height="860" Width="1000" MinHeight="800" MinWidth="900">
     <Window.Resources>
         <converters:BoolToInverseConverter x:Key="BoolToInverse"/>
         <converters:LongToLagColorConverter x:Key="LongToLagColor"/>
@@ -238,8 +238,8 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
@@ -254,7 +254,7 @@
                         </StackPanel>
 
                         <ListBox Grid.Row="2" ItemsSource="{Binding FilteredTopicList}" SelectedItem="{Binding SelectedTopic}" 
-                                 DisplayMemberPath="TopicName" Height="200" Margin="0 5"/>
+                                 DisplayMemberPath="TopicName"  Margin="0 5"/>
 
                         <!-- Topic actions -->
                         <WrapPanel Grid.Row="3" Margin="0 5">
@@ -361,8 +361,8 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -374,7 +374,7 @@
                         </StackPanel>
 
                         <DataGrid Grid.Row="1" ItemsSource="{Binding ConsumerGroups}" AutoGenerateColumns="False"
-                                  SelectedItem="{Binding SelectedConsumerGroup}" IsReadOnly="True" RowHeight="26" Height="150" Margin="0 5">
+                                  SelectedItem="{Binding SelectedConsumerGroup}" IsReadOnly="True" RowHeight="26" Margin="0 5">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Group ID" Width="*" Binding="{Binding GroupId}"/>
                                 <DataGridTextColumn Header="状态" Width="80" Binding="{Binding State}"/>
@@ -470,52 +470,85 @@
                     </Grid.RowDefinitions>
 
                     <Border Grid.Row="0" Grid.RowSpan="5" Style="{StaticResource SectionCardStyle}">
-                    <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="消息浏览" Style="{StaticResource SectionHeaderTextStyle}" Margin="0 0 0 10"/>
-                    <WrapPanel Grid.Row="1" Margin="0 5">
-                        <TextBlock Text="Topic：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowseTopic}" Width="220" FontSize="14" Height="26" Margin="5 0 12 0"/>
-                        <TextBlock Text="分区（可选）：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowsePartition, TargetNullValue=''}" Width="80" FontSize="14" Height="26" Margin="5 0 12 0"/>
-                        <TextBlock Text="起始偏移（可选）：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowseOffset, TargetNullValue=''}" Width="100" FontSize="14" Height="26" Margin="5 0 12 0"/>
-                        <TextBlock Text="浏览Group（可选）：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowseGroupId}" Width="180" FontSize="14" Height="26" Margin="5 0"/>
-                    </WrapPanel>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                    <WrapPanel Grid.Row="2" Margin="0 5">
-                        <TextBlock Text="条数：" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding BrowseCount}" Width="80" FontSize="14" Height="26" Margin="5 0 12 0"/>
-                        <CheckBox IsChecked="{Binding BrowseByTimestamp}" Content="按时间浏览" FontSize="13" Margin="20 0 0 0" VerticalAlignment="Center"/>
-                        <DatePicker SelectedDate="{Binding BrowseTimestamp}" FontSize="13" Height="26" Margin="10 0 0 0"/>
-                        <TextBox Text="{Binding BrowseTimeText}" Width="90" FontSize="13" Height="26" Margin="8 0 0 0" ToolTip="请输入 HH:mm 或 HH:mm:ss"/>
-                    </WrapPanel>
+                            <TextBlock Grid.Row="0" Text="消息浏览" Style="{StaticResource SectionHeaderTextStyle}" Margin="0 0 0 10"/>
 
-                    <WrapPanel Grid.Row="3" Margin="0 10">
-                        <Button Command="{Binding BrowseMessagesCommand}" Content="浏览消息" Style="{StaticResource PrimaryActionButtonStyle}" Width="100"/>
-                        <Button Command="{Binding ContinueBrowseMessagesCommand}" Content="继续读取下一页" Style="{StaticResource SecondaryActionButtonStyle}" Width="130" Margin="10 0 0 0"/>
-                        <TextBlock Style="{StaticResource StatusTextStyle}" Margin="10 0 0 0">
-                            将打开新窗口显示消息列表（分区、偏移量、时间戳、Key、Value、Headers）
-                        </TextBlock>
-                    </WrapPanel>
+                            <Grid Grid.Row="1" Margin="0 0 0 8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="250"/>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="180"/>
+                                </Grid.ColumnDefinitions>
 
-                    <Separator Grid.Row="4" Margin="0 10"/>
+                                <TextBlock Grid.Column="0" Text="Topic：" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBox Grid.Column="1" Text="{Binding BrowseTopic}" FontSize="14" Height="26" Margin="0 0 12 0"/>
+                                <TextBlock Grid.Column="2" Text="分区（可选）：" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBox Grid.Column="3" Text="{Binding BrowsePartition, TargetNullValue=''}" FontSize="14" Height="26" Margin="0 0 12 0"/>
+                                <TextBlock Grid.Column="4" Text="起始偏移（可选）：" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBox Grid.Column="5" Text="{Binding BrowseOffset, TargetNullValue=''}" FontSize="14" Height="26" Margin="0 0 12 0"/>
+                                <TextBlock Grid.Column="6" Text="浏览Group（可选）：" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBox Grid.Column="7" Text="{Binding BrowseGroupId}" FontSize="14" Height="26"/>
+                            </Grid>
 
-                    <StackPanel Grid.Row="5" Margin="0 10">
-                        <TextBlock Text="使用说明" FontSize="14" FontWeight="Bold"/>
-                        <TextBlock Text="• 按偏移浏览：指定 Topic + 分区 + 偏移量，从指定位置读取N条消息" FontSize="12" Margin="0 5"/>
-                        <TextBlock Text="• 按时间浏览：指定 Topic + 日期 + 时间，从该时间点开始读取N条消息" FontSize="12" Margin="0 2"/>
-                        <TextBlock Text="• 不指定分区则轮询所有分区；浏览 Group 可用于隔离临时会话位点" FontSize="12" Margin="0 2"/>
-                        <TextBlock Text="• 消息详情包含：分区、偏移量、时间戳、Key、Value、Headers" FontSize="12" Margin="0 2"/>
-                    </StackPanel>
-                    </Grid>
+                            <Grid Grid.Row="2" Margin="0 0 0 10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="条数：" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBox Grid.Column="1" Text="{Binding BrowseCount}" FontSize="14" Height="26" Margin="0 0 12 0"/>
+                                <CheckBox Grid.Column="2" IsChecked="{Binding BrowseByTimestamp}" Content="按时间浏览" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="日期：" Style="{StaticResource FieldLabelTextStyle}" Margin="12 0 0 0"/>
+                                <DatePicker Grid.Column="4" SelectedDate="{Binding BrowseTimestamp}" FontSize="13" Height="26" Margin="0 0 12 0"/>
+                                <TextBlock Grid.Column="5" Text="时间：" Style="{StaticResource FieldLabelTextStyle}"/>
+                                <TextBox Grid.Column="6" Text="{Binding BrowseTimeText}" FontSize="13" Height="26" ToolTip="请输入 HH:mm 或 HH:mm:ss"/>
+                            </Grid>
+
+                            <Grid Grid.Row="3" Margin="0 0 0 10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0" Command="{Binding BrowseMessagesCommand}" Content="浏览消息" Style="{StaticResource PrimaryActionButtonStyle}" Width="100"/>
+                                <Button Grid.Column="1" Command="{Binding ContinueBrowseMessagesCommand}" Content="继续读取下一页" Style="{StaticResource SecondaryActionButtonStyle}" Width="130" Margin="10 0 0 0"/>
+                                <TextBlock Grid.Column="2" Style="{StaticResource StatusTextStyle}" Margin="12 0 0 0">
+                                    将打开新窗口显示消息列表（分区、偏移量、时间戳、Key、Value、Headers）
+                                </TextBlock>
+                            </Grid>
+
+                            <Separator Grid.Row="4" Margin="0 6 0 8"/>
+
+                            <StackPanel Grid.Row="5">
+                                <TextBlock Text="使用说明" FontSize="14" FontWeight="Bold"/>
+                                <TextBlock Text="• 按偏移浏览：指定 Topic + 分区 + 偏移量，从指定位置读取N条消息" FontSize="12" Margin="0 5 0 0"/>
+                                <TextBlock Text="• 按时间浏览：指定 Topic + 日期 + 时间，从该时间点开始读取N条消息" FontSize="12" Margin="0 2 0 0"/>
+                                <TextBlock Text="• 不指定分区则轮询所有分区；浏览 Group 可用于隔离临时会话位点" FontSize="12" Margin="0 2 0 0"/>
+                                <TextBlock Text="• 消息详情包含：分区、偏移量、时间戳、Key、Value、Headers" FontSize="12" Margin="0 2 0 0"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
                 </Grid>
             </TabItem>
