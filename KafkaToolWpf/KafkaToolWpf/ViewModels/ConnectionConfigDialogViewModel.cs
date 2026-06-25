@@ -127,7 +127,9 @@ namespace KafkaToolWpf.ViewModels
         }
 
         public DelegateCommand AddConnectionCommand { get; }
+        public DelegateCommand NewConnectionCommand { get; }
         public DelegateCommand DeleteConnectionCommand { get; }
+        public DelegateCommand DuplicateConnectionCommand { get; }
         public DelegateCommand SaveCommand { get; }
         public DelegateCommand SelectAndCloseCommand { get; }
         public DelegateCommand ImportCommand { get; }
@@ -146,11 +148,47 @@ namespace KafkaToolWpf.ViewModels
         public ConnectionConfigDialogViewModel()
         {
             AddConnectionCommand = new DelegateCommand(AddConnection);
+            NewConnectionCommand = new DelegateCommand(NewConnection);
+            DuplicateConnectionCommand = new DelegateCommand(DuplicateConnection);
             DeleteConnectionCommand = new DelegateCommand(DeleteConnection);
             SaveCommand = new DelegateCommand(Save);
             SelectAndCloseCommand = new DelegateCommand(SelectAndClose);
             ImportCommand = new DelegateCommand(ImportConnections);
             ExportCommand = new DelegateCommand(ExportConnections);
+        }
+
+        private void NewConnection()
+        {
+            SelectedConnection = null;
+            ClearEditFields();
+        }
+
+        private void DuplicateConnection()
+        {
+            if (SelectedConnection == null) return;
+
+            // Copy selected connection fields into editor, but do not set SelectedConnection
+            CopyToEditor(SelectedConnection);
+            SelectedConnection = null;
+        }
+
+        private void CopyToEditor(ConnectionConfig src)
+        {
+            if (src == null) return;
+
+            EditName = src.Name;
+            EditBootstrapServers = src.BootstrapServers;
+            EditUseSasl = src.UseSasl;
+            EditSaslMechanism = src.SaslMechanism ?? "PLAIN";
+            EditSaslUsername = src.SaslUsername;
+            EditSaslPassword = src.SaslPassword;
+            EditUseSsl = src.UseSsl;
+            EditSslCaLocation = src.SslCaLocation;
+            EditSslCertificateLocation = src.SslCertificateLocation;
+            EditSslKeyLocation = src.SslKeyLocation;
+            EditSslSkipVerify = src.SslSkipVerify;
+
+            RaiseActionText();
         }
 
         private void AddConnection()
