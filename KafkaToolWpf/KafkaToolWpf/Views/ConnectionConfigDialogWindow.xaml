@@ -113,7 +113,7 @@
             <Button Command="{Binding NewConnectionCommand}" Content="新建" FontSize="13" Width="70" Height="28" Margin="0 0 10 0"/>
             <Button Command="{Binding AddConnectionCommand}" Content="{Binding UpsertButtonText}" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
             <Button Command="{Binding SelectAndCloseCommand}" Content="选择并关闭" FontSize="13" Width="90" Height="28" Margin="0 0 10 0"/>
-            <Button Command="{Binding SaveCommand}" Content="保存" FontSize="13" Width="70" Height="28"/>
+            <Button Command="{Binding CloseCommand}" Content="关闭" FontSize="13" Width="70" Height="28"/>
         </StackPanel>
     </Grid>
 </UserControl>

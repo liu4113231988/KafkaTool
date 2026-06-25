@@ -130,7 +130,7 @@ namespace KafkaToolWpf.ViewModels
         public DelegateCommand NewConnectionCommand { get; }
         public DelegateCommand DeleteConnectionCommand { get; }
         public DelegateCommand DuplicateConnectionCommand { get; }
-        public DelegateCommand SaveCommand { get; }
+        public DelegateCommand CloseCommand { get; }
         public DelegateCommand SelectAndCloseCommand { get; }
         public DelegateCommand ImportCommand { get; }
         public DelegateCommand ExportCommand { get; }
@@ -151,7 +151,7 @@ namespace KafkaToolWpf.ViewModels
             NewConnectionCommand = new DelegateCommand(NewConnection);
             DuplicateConnectionCommand = new DelegateCommand(DuplicateConnection);
             DeleteConnectionCommand = new DelegateCommand(DeleteConnection);
-            SaveCommand = new DelegateCommand(Save);
+            CloseCommand = new DelegateCommand(Save);
             SelectAndCloseCommand = new DelegateCommand(SelectAndClose);
             ImportCommand = new DelegateCommand(ImportConnections);
             ExportCommand = new DelegateCommand(ExportConnections);
